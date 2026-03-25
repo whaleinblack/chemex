@@ -239,7 +239,7 @@ const copy: Record<Locale, Copy> = {
 };
 
 const ACTIVE_JOB_STATUSES: JobStatus[] = ['queued', 'running'];
-const APP_BASE_PATH = normalizeBasePath(import.meta.env.BASE_URL || '/');
+const APP_BASE_PATH = detectRuntimeBasePath();
 
 const stageCopy: Record<Locale, Record<string, string>> = {
   zh: {
@@ -1023,6 +1023,22 @@ function normalizeBasePath(basePath: string) {
 
   const trimmed = basePath.replace(/^\/+|\/+$/g, '');
   return trimmed ? `/${trimmed}/` : '/';
+}
+
+function detectRuntimeBasePath() {
+  if (typeof window === 'undefined') {
+    return '/';
+  }
+
+  try {
+    const assetDir = new URL('.', import.meta.url).pathname;
+    if (assetDir.endsWith('/assets/')) {
+      return normalizeBasePath(assetDir.slice(0, -'assets/'.length));
+    }
+    return normalizeBasePath(assetDir);
+  } catch {
+    return normalizeBasePath(window.location.pathname.startsWith('/chemex/') || window.location.pathname === '/chemex' ? '/chemex/' : '/');
+  }
 }
 
 function buildAppPath(path: string) {
