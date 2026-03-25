@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react';
 import {
   ActionIcon,
   Badge,
@@ -241,6 +241,7 @@ const copy: Record<Locale, Copy> = {
 };
 
 const ACTIVE_JOB_STATUSES: JobStatus[] = ['queued', 'running'];
+const APP_BASE_PATH = normalizeBasePath(import.meta.env.BASE_URL || '/');
 
 const stageCopy: Record<Locale, Record<string, string>> = {
   zh: {
@@ -332,8 +333,8 @@ function App() {
 
   useEffect(() => {
     void Promise.all([
-      fetch('/api/health').then((res) => res.json()),
-      fetch('/api/zeopp/status').then((res) => res.json()),
+      fetch(buildAppPath('api/health')).then((res) => res.json()),
+      fetch(buildAppPath('api/zeopp/status')).then((res) => res.json()),
     ]).then(([healthData, zeoppData]) => {
       setHealth(healthData);
       setZeoppStatus(zeoppData);
@@ -348,7 +349,7 @@ function App() {
     let cancelled = false;
     const poll = async () => {
       try {
-        const response = await fetch(`/api/jobs/${sesamiJob.jobId}`);
+        const response = await fetch(buildAppPath(`api/jobs/${sesamiJob.jobId}`));
         const data = (await response.json()) as JobSnapshot<SesamiResult> & { error?: string };
         if (!response.ok) {
           throw new Error(data.error || t.failed);
@@ -391,7 +392,7 @@ function App() {
     let cancelled = false;
     const poll = async () => {
       try {
-        const response = await fetch(`/api/jobs/${zeoppJob.jobId}`);
+        const response = await fetch(buildAppPath(`api/jobs/${zeoppJob.jobId}`));
         const data = (await response.json()) as JobSnapshot<ZeoppResult> & { error?: string };
         if (!response.ok) {
           throw new Error(data.error || t.failed);
@@ -448,7 +449,7 @@ function App() {
     formData.append('gas', sesamiGas);
 
     try {
-      const response = await fetch('/api/sesami/bet', {
+      const response = await fetch(buildAppPath('api/sesami/bet'), {
         method: 'POST',
         body: formData,
       });
@@ -484,7 +485,7 @@ function App() {
     formData.append('numSamples', String(numSamples));
 
     try {
-      const response = await fetch('/api/zeopp/psd', {
+      const response = await fetch(buildAppPath('api/zeopp/psd'), {
         method: 'POST',
         body: formData,
       });
@@ -950,11 +951,16 @@ function normalizeSesamiResult(result: SesamiResult | null | undefined): SesamiR
   }
 
   const plots = Array.isArray(result.plots)
-    ? result.plots.filter((plot): plot is SesamiPlot => Boolean(plot?.url && plot?.name))
+    ? result.plots
+        .filter((plot): plot is SesamiPlot => Boolean(plot?.url && plot?.name))
+        .map((plot) => ({
+          ...plot,
+          url: normalizeAppUrl(plot.url) || plot.url,
+        }))
     : [];
 
   if (!plots.length && result.plotUrl) {
-    plots.push({ name: 'isotherm.png', url: result.plotUrl });
+    plots.push({ name: 'isotherm.png', url: normalizeAppUrl(result.plotUrl) || result.plotUrl });
   }
 
   const selectedPoints = Array.isArray(result.selectedPoints)
@@ -965,6 +971,7 @@ function normalizeSesamiResult(result: SesamiResult | null | undefined): SesamiR
 
   return {
     ...result,
+    plotUrl: normalizeAppUrl(result.plotUrl),
     plots,
     points: Array.isArray(result.points) ? result.points : [],
     selectedPoints,
@@ -972,6 +979,28 @@ function normalizeSesamiResult(result: SesamiResult | null | undefined): SesamiR
   };
 }
 
+function normalizeBasePath(basePath: string) {
+  if (!basePath || basePath === '/') {
+    return '/';
+  }
+
+  const trimmed = basePath.replace(/^\/+|\/+$/g, '');
+  return trimmed ? `/${trimmed}/` : '/';
+}
+
+function buildAppPath(path: string) {
+  return `${APP_BASE_PATH}${path.replace(/^\/+/, '')}`;
+}
+
+function normalizeAppUrl(url?: string | null) {
+  if (!url) {
+    return null;
+  }
+  if (/^[a-z]+:/i.test(url)) {
+    return url;
+  }
+  return buildAppPath(url.replace(/^\/+/, ''));
+}
 function getSesamiPlotLabel(locale: Locale, filename: string) {
   const labels: Record<string, Record<Locale, string>> = {
     'isotherm.png': { zh: '\u7b49\u6e29\u7ebf\u56fe', en: 'Isotherm plot' },
