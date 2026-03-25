@@ -1,0 +1,14 @@
+name: SESAMI_web
+channels:
+  - anaconda
+  - conda-forge
+dependencies:
+  - python=3.8
+  - flask
+  - numpy
+  - pandas
+  - matplotlib
+  - scipy
+  - statsmodels
+  - pymongo
+  - scikit-learn

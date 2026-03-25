@@ -1,0 +1,1038 @@
+<!-- Import libraries-->
+<script src="libraries/jquery-3.4.1.min.js"></script>
+<script type="text/javascript" src="libraries/ngl.js"></script>
+<script type="text/javascript" src="libraries/webGavrog/runtime.js"></script>
+<script type="text/javascript" src="libraries/webGavrog/vendors.js"></script>
+<script type="text/javascript" src="libraries/webGavrog/main.js"></script>
+<script src="libraries/3Dmol-min.js"></script>
+<script src="libraries/bootstrap.min.js"></script>
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-2.3.1.min.js"></script>
+
+<!-- Import CSS -->
+<link rel="stylesheet" href="libraries/bootstrap.min.css">
+<link rel="stylesheet" href="libraries/bootstrap_custom.min.css">
+
+<!-- Custom CSS code is placed within the <style> tag -->
+<style>
+  .round_button { /* For the round_button class */
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    min-width: 130px;
+    width: 33%;
+    background-color: #0000FF; /*blue*/
+  }
+
+  #plot_display { /* For anything with the plot_display ID */
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+
+  #raw_data_figure { 
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 50%;
+  }
+
+  .minibutton {
+      background: none;
+      border: none;
+  }
+
+  .round_minibutton {
+    background: none;
+    border-radius: 25px;
+    min-width: 130px;
+    width: 33%;
+  }
+</style>
+
+<head>
+<!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-RP50QX41FS"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-RP50QX41FS');
+  </script>
+<!--   End of Google Analytics stuff -->
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+  <title>SESAMI Website</title>
+</head>
+
+<!-- Beginning of HTML section -->
+
+<body>
+  <!-- This div contains a navbar. -->
+  <div class="navbar navbar-expand-lg fixed-top navbar-dark bg-primary">
+    <div class="container">
+      <a href="../" class="navbar-brand" style='font-size: 30px;'>A web interface for SESAMI analysis</a>
+
+      <div class="collapse navbar-collapse" id="navbarResponsive" style='font-size: 20px;'>
+        <ul class="navbar-nav">
+          <li class="nav-item" style='padding-left: 30px;'>
+            <a class="nav-link" href="/about_page">About</a>
+          </li>
+          <li class="nav-item" style='padding-left: 30px;'>
+            <a class="nav-link" href="https://github.com/hjkgrp/SESAMI_web">Source Code</a>
+          </li>
+          <li class="nav-item" style='padding-left: 30px;'>
+            <a class="nav-link" href="/how_to_cite">How to Cite</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- This div contains general information. -->
+  <div style='font-size:18px;' class="container">
+  <p>Tired of using an old excel spreadsheet from your co-workers?</p> 
+  <p><b>On-the-fly</b>, this website performs <b>Brunauer-Emmett-Teller (BET)</b>, <b>BET+Excess Sorption Work (ESW)</b>, and <b>Machine Learning (ML)</b> analysis
+  to accurately estimate the surface area of nanoporous materials. You can upload your isotherm data in either <b>Comma Separated-Values (CSV)</b> or <b>Adsorption Information File (AIF)</b> file format.</p>
+  
+    <p><b>Step 1 (optional): </b>Convert RAW output files from commercial equipment to AIF format using <a href="http://adsorptioninformationformat.com/raw2aif" target="_blank">this link.</a></p>
+    <p><b>Step 2: </b>Upload the converted data from Step 1 by clicking "Upload CSV or AIF"</p>
+    <p><b>Step 3: </b>Click "Run calculation"</p>
+
+  </div>
+  <div style='font-size:14px; background-color:#F6EFA6; border: solid black 2px;' class="container">
+  Default gas molecule for the analysis is <b>Nitrogen</b>, i.e. N<sub>2</sub>.<br><br>
+
+    Calculations assume the input data file contains an isotherm measured at one of the following conditions:<br>
+    &#8226 Nitrogen: T = 77 K <br>
+    &#8226 Argon: T = 87 K <br>
+    For both cases, p<sub>0</sub> = 1e5 Pa. The cross section of nitrogen used in the code is 16.2 Å<sup>2</sup> per molecule. The cross section of argon used is 14.2 Å<sup>2</sup> per molecule.<br><br>
+  
+  If you want to analyze a simulated BET isotherm, <a href="/example_csv" download>download the example CSV file</a> and format your simulation data accordingly. Note the units and the column names in the first row!<br>
+  </div>
+
+
+    <div style='width:100%; text-align:center; margin-top:0.25cm;'>
+      <input type="checkbox" id="permission_checkbox" onclick='handleCheckbox(this)'>
+      <label for="permission_checkbox"> Share data with developers!</label><br>
+    </div>
+
+
+
+  <!-- This div displays figures and has a button that allows the user to download the figure pngs. -->
+  <div id='plot_div' style='font-size:16px; padding-top: 30px; width:100%;' class="container">
+    <!-- Figure type -->
+    <div class = 'row'>
+      <div class='col-lg-4'>
+        Figure type
+      </div>
+      <div class='col-lg-8'>
+        <input autocomplete="off" id='plottype_dropdown' style='font-size: 16px; width:100%' class='form-control locksMetrics' list='plottype_list' onmousedown="value = '';" onChange='switch_plot(this.value)'/>
+        <datalist id='plottype_list' style='font-size: 16px;'>
+          <!-- Set with option_generator function  -->
+        </datalist>
+      </div>
+    </div>
+
+    <div style='text-align:center;'>
+      <img style='margin-top: 0.25cm;' id='plot_display' alt='SESAMI 1 plot'>
+      <button id='download_button' class='btn btn-primary round_button' style='font-size:16px;'>Download figure</button>
+    </div>
+  </div>
+
+
+  <!-- This div contains the print out of calculations run on the website. -->
+  <div style='font-size:16px; padding-top: 30px' id='print_out' class="container">
+    <p style='font-size:16px; margin-top:0.25cm;'>Any linear region selected by SESAMI 1.0 will fulfill Rouquerol criteria 1 and 2.</p>
+    <p style='font-size:16px; margin-top:0.25cm; font-weight:Bold' id='BET_readout_header'>SESAMI 1.0 (BET) results are:</p>
+    <p style='font-size:16px; margin-top:0.25cm;' id='BET_readout'></p>
+    <p style='font-size:16px; margin-top:0.25cm; font-weight:Bold' id='BETESW_readout_header'>SESAMI 1.0 (BET+ESW) results are:</p>
+    <p style='font-size:16px; margin-top:0.25cm;' id='BETESW_readout'></p>
+    <p style='font-size:16px; margin-top:0.25cm; font-weight:Bold' id='ML_prediction_header'>SESAMI 2.0 (LASSO) surface area prediction is:</p>
+    <p style='font-size:16px; margin-top:0.25cm;' id='ML_prediction'></p>
+  </div>
+
+
+  <!-- This div contains important buttons that run the pivotal commands on the website. -->
+  <div style='font-size:16px; padding-top: 30px' class="container">
+    <!-- Create a section containing buttons -->
+    <div class='col-lg-12'>
+      <div style='width:100%; text-align:center; margin-top:0.25cm;'>
+        <button id='example_isotherm' class='btn btn-primary round_button' style='font-size:16px;'>Example isotherm</button>
+        <button id='upload_button' class='btn btn-primary round_button' style='font-size:16px;'>Upload CSV or AIF</button>
+        <button id='run_button' class='btn btn-primary round_button' style='font-size:16px;'>Run calculation</button>
+      </div>
+    </div>
+    <div style='width:100%; text-align:center; margin-top:0.25cm;'>
+      <p id='calculation_status'></p> <!-- Will indicate whether a calculation is underway. -->
+    </div>
+    <div style='width:100%; text-align:center; margin-top:0.25cm;'>
+      <p id='calculation_hint'>Did you receive an empty error message? Try reloading the webpage and trying the calculation again.</p>
+    </div>
+    <div style='font-size:16px; margin-top:0.25cm;' id='upload_status'></div>
+
+    <!-- This div has links for the user to download the example input files. -->
+    <div class='col-lg-12'>
+      <div style='width:100%; text-align:center; margin-top:0.25cm;'>
+        <a href="/example_csv" download> Download the example CSV file </a> &emsp; &emsp; &emsp;
+        <a href="/example_aif" download> Download the example AIF file </a>
+      </div>
+    </div>
+
+    <!-- This div displays the data the user uploads. -->
+    <div id='raw_data_display'>
+      <img style='margin-top: 0.25cm;' id='raw_data_figure' alt='Your raw data'>
+    </div>
+
+  </div>
+
+
+  <!-- This div is a space for users to enter information about themselves so we can improve our services. -->
+  <div id='about_you_container' style='font-size:16px; padding-top: 30px; width:100%;' class="container">
+    <div style='text-align: center;'>
+          <button class='round_minibutton' id='about_you_button'>About you</button>
+    </div>
+
+    <div id='about_you_content'>
+      Name: <input type="text" id='user_name' class='form-control'><br>
+      Email: <input type="text" id='user_email' class='form-control'><br>
+      Institution: <input type="text" id='user_institution' class='form-control'><br>
+      Material type: <input type="text" id='user_material' class='form-control'><br>
+    </div>
+  </div>
+
+
+  <!-- This div contains general options. -->
+  <div style='font-size:16px; padding-top: 30px; text-align:center;' class="container">
+    <button class='round_minibutton' id='general_opt_button'>Show general options</button>
+
+    <div id='general_options'>
+
+      <!-- Adsorbate -->
+      <div class='row' id='gas_dropdown_section' style='margin-top: 0.5cm;'>
+        <div class='col-lg-4'>Type of gas</div>
+        <div class='col-lg-8'>
+          <input id='gas_dropdown' autocomplete="off" style='font-size: 16px; width:100%' class='form-control' list='gas_list' onmousedown="value = '';" />
+          <datalist id='gas_list' style='font-size: 16px;'>
+            <option value="Nitrogen">
+            <option value="Argon">
+          </datalist>
+        </div>
+      </div>
+
+      <!-- Custom adsorbate -->
+      <div class='row' style='margin-top: 0.5cm;'>
+        <div class='col-lg-4'>Custom adsorbate</div>
+        <div class='col-lg-8'>
+          <input id='custom_dropdown' autocomplete="off" style='font-size: 16px; width:100%' class='form-control' list='custom_list' onmousedown="value = '';" />
+          <datalist id='custom_list' style='font-size: 16px;'>
+            <option value="Yes">
+            <option value="No">
+          </datalist>
+        </div>
+      </div>
+
+      <div id='custom_options'>
+        <!-- Custom adsorbate cross section -->
+        <div class = 'row' style='margin-top: 0.25cm;'>
+          <div class='col-lg-4'>
+            Custom adsorbate cross section (Å<sup>2</sup>)
+          </div>
+          <div class='col-lg-8'>
+            <input type="text" id="custom_xsection_input" style='font-size: 16px; width:100%' class='form-control' placeholder="16.2">
+          </div>
+        </div>
+
+        <!-- Custom adsorbate temperature -->
+        <div class = 'row' style='margin-top: 0.25cm;'>
+          <div class='col-lg-4'>
+            Custom adsorbate temperature (K)
+          </div>
+          <div class='col-lg-8'>
+            <input type="text" id="custom_temperature_input" style='font-size: 16px; width:100%' class='form-control' placeholder="77">
+          </div>
+        </div>
+
+        <!-- Custom adsorbate saturation pressure -->
+        <div class = 'row' style='margin-top: 0.25cm;'>
+          <div class='col-lg-4'>
+            Custom adsorbate saturation pressure (Pa)
+          </div>
+          <div class='col-lg-8'>
+            <input type="text" id="custom_sat_p_input" style='font-size: 16px; width:100%' class='form-control' placeholder="100000">
+          </div>
+        </div>
+      </div>
+
+      <div class='row'>
+        <div class='col-lg-4' style='margin-top: 1.5cm;'> <h5>SESAMI 1.0</h5> </div>
+      </div>
+
+      <!-- Scope -->
+      <div class='row' style='margin-top: 0.25cm;'>
+        <div class='col-lg-4'>Scope</div>
+        <div class='col-lg-8'>
+          <input id='scope_dropdown' autocomplete="off" style='font-size: 16px; width:100%' class='form-control' list='scope_list' onmousedown="value = '';" />
+          <datalist id='scope_list' style='font-size: 16px;'>
+            <option value="BET and BET+ESW">
+            <option value="BET">
+          </datalist>
+        </div>
+      </div>
+
+      <!-- R^2 cutoff -->
+      <div class = 'row' style='margin-top: 0.25cm;'>
+        <div class='col-lg-4'>
+          R<sup>2</sup> cutoff
+        </div>
+        <div class='col-lg-8'>
+          <input type="text" id="r2cutoff_input" style='font-size: 16px; width:100%' class='form-control' placeholder="0.9995">
+        </div>
+      </div>
+
+      <!-- R^2 min -->
+      <div class = 'row' style='margin-top: 0.25cm;'>
+        <div class='col-lg-4'>
+          R<sup>2</sup> min
+        </div>
+        <div class='col-lg-8'>
+          <input type="text" id="r2min_input" style='font-size: 16px; width:100%' class='form-control' placeholder="0.998">
+        </div>
+      </div>
+
+      <div id='ml_section'>
+        <div class='row' style='margin-top: 1.5cm;'>
+          <div class='col-lg-4'> <h5>SESAMI 2.0</h5> </div>
+        </div>
+
+        <!-- ML -->
+        <div class='row' style='margin-top: 0.25cm;'>
+          <div class='col-lg-4'>Include ML prediction?</div>
+          <div class='col-lg-8'>
+            <input id='ML_dropdown' autocomplete="off" style='font-size: 16px; width:100%' class='form-control' list='ML_list' onmousedown="value = '';" />
+            <datalist id='ML_list' style='font-size: 16px;'>
+              <option value="Yes">
+              <option value="No">
+            </datalist>
+          </div>
+
+          <p style='margin-top: 0.25cm;'>
+            Note: The Lasso ML model prediction is automatically multiplied by 1.148 if Nitrogen gas is the adsorbate. See the SESAMI 2 paper for more details. 
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- This div contains plotting options. -->
+  <div style='font-size:16px; padding-top: 30px; text-align:center;' class="container">
+    <button class='round_minibutton' id='plotting_opt_button'>Show plotting options (SESAMI 1.0)</button>
+
+    <div id='plotting_options'>
+
+      <!-- Figure legend -->
+      <div class = 'row' style='margin-top: 0.25cm;'>
+        <div class='col-lg-4'>
+          Figure legend 
+        </div>
+        <div class='col-lg-8'>
+          <input autocomplete="off" id='legend_dropdown' style='font-size: 16px; width:100%' class='form-control' placeholder="Yes" list='legend_list' onmousedown="value = '';" />
+          <datalist id='legend_list' style='font-size: 16px;'>
+            <option value="Yes">
+            <option value="No">
+          </datalist>   
+        </div>
+      </div>
+
+      <!-- Figure font size -->
+      <div class = 'row' style='margin-top: 0.25cm;'>
+        <div class='col-lg-4'>
+          Figure font size
+        </div>
+        <div class='col-lg-8'>
+          <input autocomplete="off" id='fontsize_dropdown' style='font-size: 16px; width:100%' class='form-control' placeholder="10" list='fontsize_list' onmousedown="value = '';" />
+          <datalist id='fontsize_list' style='font-size: 16px;'>
+            <option value="6">
+            <option value="8">
+            <option value="10">
+            <option value="12">
+            <option value="14">
+            <option value="16">
+            <option value="18">
+            <option value="20">
+          </datalist>
+        </div>
+      </div>
+
+      <!-- Figure font type -->
+      <div class = 'row' style='margin-top: 0.25cm;'>
+        <div class='col-lg-4'>
+          Figure font type
+        </div>
+        <div class='col-lg-8'>
+          <input autocomplete="off" id='fonttype_dropdown' style='font-size: 16px; width:100%' class='form-control' placeholder="sans-serif" list='fonttype_list' onmousedown="value = '';" />
+          <datalist id='fonttype_list' style='font-size: 16px;'>
+            <option value="sans-serif">
+            <option value="serif">
+            <option value="monospace">
+          </datalist>
+        </div>
+      </div>
+
+      <!-- Figure dpi -->
+      <div class = 'row' style='margin-top: 0.25cm;'>
+        <div class='col-lg-4'>
+          Figure dpi
+        </div>
+        <div class='col-lg-8'>
+          <input autocomplete="off" id='dpi_dropdown' style='font-size: 16px; width:100%' class='form-control' placeholder="300" list='dpi_list' onmousedown="value = '';" />
+          <datalist id='dpi_list' style='font-size: 16px;'>
+            <option value="300">
+            <option value="600">
+          </datalist>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- This div contains a bottom bar.  -->
+  <div class="navbar navbar-expand-lg relative navbar-light bg-light" style="margin-top: 50px; font-size: 18px;">
+    <div class="container">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link disabled">Site developed and maintained by Gianmarco Terrones (Kulik Group @ MIT) and Dr. Yongchul G. Chung (Pusan National
+          University)</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+
+  <!-- This html element stores any uploaded CSV files. Does not display. -->
+  <input id="file_input" type="file" name="file_input" style="display:none" />
+
+</body>
+
+<!-- End of HTML section -->
+
+
+
+<!-- Beginning of JavaScript section -->
+<script>
+
+  // Global variables
+  let FIGURE_PATH = null
+  let OUTPUT_NAME = null
+  let PLOT_NUMBER = null
+
+  // A helper function that clears text out, hides elements, and sets default values.
+  function clean_slate() {
+    clean_slate_partial()
+
+    // setting default values
+    $('#permission_checkbox').prop('checked', true)
+    $('#gas_dropdown').val('Nitrogen') 
+    $('#custom_dropdown').val('No')
+    $('#custom_xsection_input').val('16.2')
+    $('#custom_temperature_input').val('77')
+    $('#custom_sat_p_input').val('100000')
+    $('#scope_dropdown').val('BET and BET+ESW')
+    $('#r2cutoff_input').val('0.9995') 
+    $('#r2min_input').val('0.998')
+    $('#ML_dropdown').val('No')
+    $('#legend_dropdown').val('Yes')
+    $('#fontsize_dropdown').val('10') 
+    $('#fonttype_dropdown').val('sans-serif') 
+    $('#dpi_dropdown').val('300') 
+
+    $("#custom_options").hide()
+
+  }
+
+  // This function only clears and hides elements but does not reset the general and plotting options.
+  function clean_slate_partial() {
+    $('#BET_readout').text('')
+    $('#BETESW_readout').text('')    
+    $('#ML_prediction').text('')
+    $('#plottype_dropdown').val('Multiplot') 
+    $('#plot_div').hide()
+    $('#print_out').hide()
+    $('#general_options').hide()    
+    $('#general_opt_button').text('Show general options')    
+    $('#plotting_options').hide() 
+    $('#plotting_opt_button').text('Show plotting options (SESAMI 1.0)') 
+    $('#about_you_content').hide()
+    $('#raw_data_display').hide()
+    $('#calculation_hint').hide()
+  }
+
+  // This next function is used to parse a CSV to an array.
+  // ref: http://stackoverflow.com/a/1293163/2343
+  // This will parse a delimited string into an array of
+  // arrays. The default delimiter is the comma, but this
+  // can be overridden in the second argument.
+  function CSVToArray( strData, strDelimiter ){
+      // Check to see if the delimiter is defined. If not,
+      // then default to comma.
+      strDelimiter = (strDelimiter || ",");
+
+      // Create a regular expression to parse the CSV values.
+      var objPattern = new RegExp(
+          (
+              // Delimiters.
+              "(\\" + strDelimiter + "|\\r?\\n|\\r|^)" +
+
+              // Quoted fields.
+              "(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|" +
+
+              // Standard fields.
+              "([^\"\\" + strDelimiter + "\\r\\n]*))"
+          ),
+          "gi"
+          );
+
+
+      // Create an array to hold our data. Give the array
+      // a default empty first row.
+      var arrData = [[]];
+
+      // Create an array to hold our individual pattern
+      // matching groups.
+      var arrMatches = null;
+
+      // Keep looping over the regular expression matches
+      // until we can no longer find a match.
+      while (arrMatches = objPattern.exec( strData )){
+
+          // Get the delimiter that was found.
+          var strMatchedDelimiter = arrMatches[ 1 ];
+
+          // Check to see if the given delimiter has a length
+          // (is not the start of string) and if it matches
+          // field delimiter. If it does not, then we know
+          // that this delimiter is a row delimiter.
+          if (
+              strMatchedDelimiter.length &&
+              strMatchedDelimiter !== strDelimiter
+              ){
+
+              // Since we have reached a new row of data,
+              // add an empty row to our data array.
+              arrData.push( [] );
+
+          }
+
+          var strMatchedValue;
+
+          // Now that we have our delimiter out of the way,
+          // let's check to see which kind of value we
+          // captured (quoted or unquoted).
+          if (arrMatches[ 2 ]){
+
+              // We found a quoted value. When we capture
+              // this value, unescape any double quotes.
+              strMatchedValue = arrMatches[ 2 ].replace(
+                  new RegExp( "\"\"", "g" ),
+                  "\""
+                  );
+
+          } else {
+
+              // We found a non-quoted value.
+              strMatchedValue = arrMatches[ 3 ];
+
+          }
+
+          // Now that we have our value string, let's add
+          // it to the data array.
+          arrData[ arrData.length - 1 ].push( strMatchedValue );
+      }
+
+      // Return the parsed data.
+      return( arrData );
+  }
+
+  // Used for ensuring that only .csv and .aif files are uploaded.
+  function getExtension(filename) {
+    var parts = filename.split('.');
+    return parts[parts.length - 1];
+  }
+  function isCSV(filename) {
+    var ext = getExtension(filename);
+    return ext == 'csv';
+  }
+  function isAIF(filename) {
+    var ext = getExtension(filename);
+    return (ext == 'aif' || ext == 'aiff');
+  }
+
+  // Helper function that displays the isotherm data the user has selected in a semilogx plot.
+  function show_data(){
+    $('#raw_data_display').show()
+
+    $.get("/show_data").done(
+      function (response) {
+        FIGURE_PATH = 'generated_plots/raw_data_' + response +  '.png'
+        $("#raw_data_figure").attr("src",FIGURE_PATH); // Setting the source of the image element appropriately
+      }
+
+    ).fail(function(xhr, textStatus, errorThrown) { // for timeout error; triggers after 1 minute
+      alert(errorThrown)
+      return // doesn't continue
+    })
+  }
+
+  // Runs when the "Example isotherm" button is clicked.
+  $('#example_isotherm').click(function () {
+    clean_slate_partial()
+
+    $('#upload_status').text('Example isotherm loaded.');
+
+    $.get("/copy_example").done( // Copy the example input's txt file into the user's folder.
+      function (response) {
+        show_data()
+    })
+
+  })
+
+  // Runs when the Custom adsorbate dropdown is changed. 
+  $("#custom_dropdown").change(function () {
+    custom = $('#custom_dropdown').val()
+    if (custom == 'Yes'){
+      $("#gas_dropdown_section").hide()
+      $("#custom_options").show()
+
+      // Disable ML approach for a custom gas, since the ML approach expects a P0 of 1e5 Pa
+      $("#ml_section").hide() 
+      $('#ML_dropdown').val('No')
+    } else if (custom == 'No'){
+      $("#gas_dropdown_section").show()
+      $("#custom_options").hide()
+      $("#ml_section").show()
+    }
+  });
+
+  // Runs when the "Upload CSV or AIF" button is clicked.
+  $('#upload_button').on('click', function () { // button triggers upload
+    clean_slate_partial()
+    $('#file_input').val(null) // clears file_input
+    $('#file_input').trigger('click'); // OS file selection
+  });
+  $("#file_input").change(function () {
+    // Check if uploaded file is a CSV or AIF
+    if (!isCSV(this.value) && !isAIF(this.value)) { // if the uploaded file is not a CSV nor an AIF
+      this.value = null; // clear the non-CSV and non-AIF file
+      $('#upload_status').text('')
+      alert("The uploaded file must be a csv or AIF file.");
+      return; // If not a CSV nor an AIF, doesn't continue.     
+    }
+
+    let myFile = document.getElementById('file_input').files[0]; // the uploaded file
+    if (isCSV(this.value)) {
+      $('#upload_status').text('Selected CSV: ' + myFile.name);
+    } else {
+      $('#upload_status').text('Selected AIF: ' + myFile.name);
+    }
+
+    if (this.files[0].size == 0) { // check if file is empty
+      this.value = null; // clear the file
+      $('#upload_status').text('')
+      alert("The uploaded file cannot be empty.");
+      return; // If the user uploaded an empty file, doesn't continue.   
+    }
+
+    // Converting the uploaded file to a TXT, and checking its formatting
+    if (isCSV(this.value)) { // CSV case
+      myFile.text().then(function (my_content) {
+        // my_content is the content of the loaded CSV
+        my_content = CSVToArray(my_content, ',')
+
+        myDict = {'my_content': my_content}
+
+        $.post("/save_csv_txt", JSON.stringify(myDict)).done( // Saves the uploaded CSV as a CSV and TXT file in the user's folder.
+          function (response) {
+
+            // Check if the uploaded CSV is of the right format. If not, clear the file_input and upload_status elements.
+            $.get("/check_csv").done(
+              function (response) {
+                if (response.startsWith('Warning: Lacking data at low pressure region.')) {
+                  alert(response) // Gives the user the warning message
+                } else if (response != 'All good!') { // The all good message indicates no errors were found in the input.
+                  this.value = null; // clear the bad CSV file
+                  $('#upload_status').text('')
+                  alert(response) // Gives the user the error message
+                  return // doesn't continue
+                }
+
+                show_data()
+
+              })
+          })
+          .fail(function(xhr, textStatus, errorThrown) { // for timeout error; triggers after 1 minute
+            alert(errorThrown)
+            return // doesn't continue
+          })
+      })
+    } else { // AIF case
+      myFile.text().then(function (my_content) {
+
+        myDict = {'my_content': my_content}
+
+        $.post("/save_aif_txt", JSON.stringify(myDict)).done( // Saves the uploaded AIF as an AIF and TXT file in the user's folder.
+          function (response) {
+
+            // Check if the uploaded AIF is of the right format. If not, clear the file_input and upload_status elements.
+            if (response != 'All good!') {
+              this.value = null; // clear the bad CSV file
+              $('#upload_status').text('')
+              alert(response)
+              return // doesn't continue
+            }
+
+            show_data()
+
+          })
+          .fail(function(xhr, textStatus, errorThrown) { // for timeout error; triggers after 1 minute
+            alert(errorThrown)
+            return // doesn't continue
+          })
+      })
+    }
+
+  });
+
+  // Function for formatting SESAMI 1 output. Replaces \n with breaks. Also adds some superscript and subscript.
+  // Source: https://stackoverflow.com/questions/4535888/jquery-text-and-newlines
+  $.fn.multiline = function(text){
+      this.text(text);
+      this.html(this.html().replace(/\n/g,'<br/>'));
+      this.html(this.html().replace(/2sup/g,'<sup>2</sup>'));
+      this.html(this.html().replace(/msub/g,'<sub>m</sub>'));
+      return this;
+  }
+
+  // Function for populating the plot dropdown based on whether BET+ESW plots are made or not.
+  var option_generator = function(scope) {
+    if (scope == 'BET and BET+ESW') {
+      options_list = ["Multiplot", "Isotherm", "BET", "ESW", "BET Linear Region", "BET+ESW Linear Region"]  
+    } else if(scope == 'BET') {
+      options_list = ["Multiplot", "Isotherm", "BET", "BET Linear Region"]
+    }
+    else{
+      console.log("Error. Scope is " + scope)
+    }
+
+    var options = ''
+    for (var i = 0; i < options_list.length; i++) {
+      options += '<option value="' + options_list[i] + '" />';
+    }
+    return options
+  }
+
+  // Runs when the "Run calculation" button is clicked.
+  $('#run_button').click(function () {
+    clean_slate_partial()
+
+    // Check if the user has uploaded an isotherm or if they have selected the example isotherm.
+    let myFile = document.getElementById('file_input').files[0]; // the uploaded file
+
+    if (myFile == undefined && $('#upload_status').text() != 'Example isotherm loaded.') { // The user has neither uploaded an isotherm nor selected the example.
+      alert("Must select an isotherm for analysis first. Please either use the example isotherm or upload your own isotherm.");
+      return;
+    }
+
+    dpi = $('#dpi_dropdown').val() // Check which dpi is selected in the dpi dropdown. 
+    font_size = $('#fontsize_dropdown').val()
+    font_type = $('#fonttype_dropdown').val()
+    legend = $('#legend_dropdown').val()
+    R2cutoff = $('#r2cutoff_input').val()
+    R2min = $('#r2min_input').val()
+    gas = $('#gas_dropdown').val()
+    scope = $('#scope_dropdown').val()
+    ML_boolean = $('#ML_dropdown').val()
+    
+    // Account for if custom adsorbate settings are used.
+    custom_boolean = $('#custom_dropdown').val()
+    custom_xsection = $('#custom_xsection_input').val()
+    custom_temperature = $('#custom_temperature_input').val()
+    custom_sat_p_input = $('#custom_sat_p_input').val()
+
+    // Ensuring that no dropdowns options are empty.
+    const var_names = ["Type of gas", "Custom adsorbate", "Scope", "Include ML prediction?", "Figure legend", "Figure font size", "Figure font type", "Figure dpi"]
+    const vars = [gas, custom_boolean, scope, ML_boolean, legend, font_size, font_type, dpi]
+    // If we are using the custom adsorbate, don't care if type of gas is empty.
+    if (custom_boolean == 'Yes') {
+      var_names.shift() // Remove first element.
+      vars.shift()      
+    }
+
+    for (let i=0; i<= vars.length; i++){
+      if (vars[i] == ''){
+        error_message = var_names[i].concat(" dropdown is empty. Please select an option.")
+        alert(error_message)
+        return; // Quit the function
+      }
+    }
+
+    // Ensuring the user put in numbers for R2 cutoff and R2min
+    if (isNaN(R2cutoff) || isNaN(R2min)) {
+      alert("R2cutoff and R2min must be numbers.");
+      return;
+    }
+    if (R2cutoff >= 1 || R2min >= 1 || R2cutoff <= 0 || R2min <= 0) {
+      alert("R2cutoff and R2min must be between zero and one."); // Values outside this range don't make sense.
+      return;
+    }
+    // Ensuring the user put in numbers for custom_xsection, custom_temperature, custom_sat_p_input
+    if (custom_boolean == 'Yes'){ // Only need to check this if the user is using the custom adsorbate option.
+      if (isNaN(custom_xsection) || isNaN(custom_temperature) || isNaN(custom_sat_p_input)) {
+        alert("Custom adsorbate cross section, temperature, and saturation pressure must be numbers.");
+        return;
+      }   
+      if (custom_xsection <=0 || custom_temperature <=0 || custom_sat_p_input <=0) {
+        alert("Custom adsorbate cross section, temperature, and saturation pressure must be greater than zero.");
+        return;
+      }      
+    }
+
+
+    // If the user used the font size drop down but never clicked anything, need to prevent this error of an empty field.
+    if (font_size == '') {
+      font_size = '10'  
+    } 
+    if (dpi == '') {
+      dpi = '300'
+    }
+
+    // User options
+    myDict = {
+      'dpi': dpi, 
+      'font size': font_size, 
+      'font type': font_type, 
+      'legend': legend, 
+      'R2 cutoff': R2cutoff, 
+      'R2 min': R2min, 
+      'gas': gas, 
+      'scope': scope, 
+      'ML': ML_boolean,
+      'custom adsorbate': custom_boolean,
+      'custom cross section': custom_xsection,
+      'custom temperature': custom_temperature,
+      'custom saturation pressure': custom_sat_p_input
+    } 
+
+    // Setting the options of plottype_dropdown based on the scope
+    document.getElementById('plottype_list').innerHTML = option_generator(scope)
+
+    $('#calculation_status').text('Calculating...') // Gives the user peace of mind that their button click actually did something :)
+    $('#calculation_hint').show()
+
+    $.post("/run_SESAMI", JSON.stringify(myDict)).done( // Runs the SESAMI 1 and SESAMI 2 code
+      function (response) {
+
+        // Failure handling
+        if (response == 'No eswminima') {
+          alert("No ESW minima was found. Change scope (general options) to BET.")
+          $('#calculation_status').text('')
+          return; // Does not continue if this failure occurs.
+        }
+        if (response == 'BET linear failure') {
+          alert("No suitable BET linear region has been found. Try lowering R2min.")
+          $('#calculation_status').text('')
+          return; // Does not continue if this failure occurs.
+        }
+        if (response == 'BET+ESW linear failure') {
+          alert("No suitable BET+ESW linear region has been found. Try lowering R2min, or change scope (general options) to BET.")
+          $('#calculation_status').text('')
+          return; // Does not continue if this failure occurs.
+        }
+
+        BET_analysis = response['BET_analysis']
+        PLOT_NUMBER = response['plot_number']
+        $('#BET_readout').multiline(BET_analysis)
+        if (scope == 'BET and BET+ESW') {
+          BETESW_analysis = response['BETESW_analysis']
+          $('#BETESW_readout_header').show()
+          $('#BETESW_readout').multiline(BETESW_analysis)          
+        } else {
+          // The user asked for no BET+ESW. So no BET+ESW is shown.
+          $('#BETESW_readout_header').hide()
+        }
+
+        if (ML_boolean == 'Yes') {
+          // The user requested a ML (SESAMI 2.0) prediction.
+
+          ML_prediction = response['ML_prediction']
+          if (ML_prediction.startsWith("Missing data in a pressure bin")) {
+            // This means the ML code could not be run. See SESAMI_2.py.
+            $('#ML_prediction_header').hide()
+            alert(ML_prediction)
+          }
+          else { 
+            // The ML code ran. Display the ML prediction.
+            $('#ML_prediction_header').show()
+            $('#ML_prediction').multiline(ML_prediction + ' m2sup/g') // The multiline function from earlier formats things nicely.  
+          }        
+        } else {
+          // The user asked for no ML. So no ML is shown.
+          $('#ML_prediction_header').hide()
+        }
+
+        $('#plot_div').show()
+        $('#print_out').show()
+        FIGURE_PATH = 'generated_plots/multiplot_' + PLOT_NUMBER + '.png'
+        document.getElementById("plot_display").style.width = '100%' // Allow for larger figure for multiplot.
+        $("#plot_display").attr("src",FIGURE_PATH); // Setting the source of the image element appropriately.
+        OUTPUT_NAME = 'multiplot.png'
+
+        $('#calculation_status').text('')
+      })
+      .fail(function(xhr, textStatus, errorThrown) { // for timeout error; triggers after 1 minute
+        console.log('run_SESAMI failed!')
+        console.log(xhr)
+        console.log(textStatus)
+        console.log(errorThrown)
+        alert(errorThrown)
+        $('#calculation_status').text('')
+      })
+
+    info_dict = {
+      'name': $('#user_name').val(),
+      'email': $('#user_email').val(),
+      'institution': $('#user_institution').val(),
+      'adsorbent': $('#user_material').val(),
+      'adsorbate': gas,
+      'custom_adsorbate': custom_boolean,
+      'custom_cross_section': custom_xsection,
+      'custom_temperature': custom_temperature,
+      'custom_saturation_pressure': custom_sat_p_input
+    }
+
+    $.post('/process_info', JSON.stringify(info_dict)).done( // Pushing information to the MongoDB.
+
+      )
+      .fail(function(xhr, textStatus, errorThrown) { // for timeout error; triggers after 1 minute
+        alert(errorThrown)
+        $('#calculation_status').text('')
+      })
+  })
+
+  // Runs when the "Download figure" button is clicked.
+  $('#download_button').click(function () { 
+    var a = document.createElement('a');
+    a.href = FIGURE_PATH // The download's location.
+    a.download = OUTPUT_NAME // The download's name.
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a); // Downloads the currently displayed figure.
+  })
+
+  // Runs when the "Show general options"/"Hide general options" button is clicked.
+  $('#general_opt_button').click(function () {
+
+    if ($('#general_opt_button').text() == 'Show general options') { // In this case, need to show the section.
+      $('#general_options').show()
+      $('#general_opt_button').text('Hide general options')
+    } else { // In this case, need to hide the section.
+      $('#general_options').hide()
+      $('#general_opt_button').text('Show general options')      
+    }
+    
+  })
+
+  // Runs when the "Show plotting options (SESAMI 1.0)" button is clicked.
+  $('#plotting_opt_button').click(function () {
+
+    if ($('#plotting_opt_button').text() == 'Show plotting options (SESAMI 1.0)') { // In this case, need to show the section.
+      $('#plotting_options').show()
+      $('#plotting_opt_button').text('Hide plotting options (SESAMI 1.0)')
+    } else { // In this case, need to hide the section.
+      $('#plotting_options').hide()
+      $('#plotting_opt_button').text('Show plotting options (SESAMI 1.0)')      
+    }
+    
+  })
+
+  // Runs when the "About you" button is clicked.
+  $('#about_you_button').click(function () {
+    if ($('#about_you_content').is(':visible')) { // In this case, need to hide the section.
+      $('#about_you_content').hide()  
+    } else {
+      $('#about_you_content').show() // In this case, need to show the section.
+    }
+    
+  })
+
+  function switch_plot(plot_type) {
+
+    document.getElementById("plot_display").style.width = '50%' // For most cases, enforce a smaller figure.
+
+    switch (plot_type){
+      case 'Multiplot':
+        FIGURE_PATH = 'generated_plots/multiplot_' + PLOT_NUMBER + '.png'
+        OUTPUT_NAME = 'multiplot.png'
+        document.getElementById("plot_display").style.width = '100%' // Allow for larger figure for multiplot.
+        break
+      case 'Isotherm':
+        FIGURE_PATH = 'generated_plots/isotherm_' + PLOT_NUMBER + '.png'
+        OUTPUT_NAME = 'isotherm.png'
+        break
+      case 'BET':
+        FIGURE_PATH = 'generated_plots/BETPlot_' + PLOT_NUMBER + '.png'
+        OUTPUT_NAME = 'BET.png'
+        break
+      case 'ESW':
+        FIGURE_PATH = 'generated_plots/ESWPlot_' + PLOT_NUMBER + '.png'
+        OUTPUT_NAME = 'ESW.png'
+        break
+      case 'BET Linear Region':
+        FIGURE_PATH = 'generated_plots/BETPlotLinear_' + PLOT_NUMBER +  '.png'
+        OUTPUT_NAME = 'BET_linear.png'
+        break
+      case 'BET+ESW Linear Region':
+        FIGURE_PATH = 'generated_plots/BETESWPlot_' + PLOT_NUMBER + '.png'
+        OUTPUT_NAME = 'BET+ESW.png'
+        break
+    }
+
+    $("#plot_display").attr("src", FIGURE_PATH); // Setting the source of the image element appropriately
+  }
+
+
+  // Runs when the user checks the "Share data with developers" checkbox
+  function handleCheckbox(cb) {
+    if (cb.checked) {
+      $('#about_you_container').show()
+      $.post("/permission", JSON.stringify(true)).done(function (response) {
+      })
+    }
+    else {
+      $('#about_you_container').hide()
+      $.post("/permission", JSON.stringify(false)).done(function (response) {
+      })
+    }
+  }
+
+
+  // The code below runs when the site first loads up (i.e. is opened in a browser).
+
+  clean_slate()
+
+  $.get("/new_user").done(
+    function (response) {
+      // Purpose of this is to make a user ID for the new browser that has accessed the site.
+      // A temporary folder is made in the backend (app.py) where the user's files are stored.
+      // The folder bears the ID of the user.
+
+      console.log('The user\'s ID is ' + response)
+
+    })
+
+
+</script>
+<!-- End of Javascript section -->

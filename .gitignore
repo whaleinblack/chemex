@@ -1,0 +1,41 @@
+# Node / frontend
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Python / local env
+.venv/
+__pycache__/
+*.pyc
+pydeps/
+
+# Runtime artifacts
+backend_artifacts/
+*.log
+*.err.log
+*.out.log
+tmp-*.out
+
+# Toolchains / local compiled runtimes
+zeopp-toolchain/
+vendor/zeopp-lsmo/zeo++/*.o
+vendor/zeopp-lsmo/zeo++/*.exe
+vendor/zeopp-lsmo/zeo++/*.dll
+vendor/zeopp-lsmo/zeo++/*.a
+vendor/zeopp-lsmo/zeo++/*.obj
+vendor/zeopp-lsmo/voro++/src/*.o
+vendor/zeopp-lsmo/voro++/src/*.a
+
+# Nested git metadata from vendored repos
+vendor/SESAMI_web/.git/
+vendor/zeopp-lsmo/.git/
+
+# Local screenshots / temp files
+ui-*.png
+frontend.log
+frontend.err.log
+backend.log
+backend.err.log
+backend-server*.log
+backend-8001.*
+backend-server-8001.*
