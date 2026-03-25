@@ -15,7 +15,6 @@ import {
   Stack,
   Tabs,
   Text,
-  Title,
 } from '@mantine/core';
 import {
   IconAtom2,
@@ -585,14 +584,14 @@ function App() {
             </Group>
             <div className="hero-brand-row">
               <img className="hero-logo" src={heroLogoUrl} alt={heroLogoAlt} />
-              <Title order={1} className="hero-title">
+              <h1 className="hero-title">
                 <span className="hero-wordmark" aria-label={heroTitle}>
                   <span>Che</span>
                   <span className="hero-accent">m</span>
                   <span>E</span>
                   <span className="hero-accent">x</span>
                 </span>
-              </Title>
+              </h1>
             </div>
             <Text className="hero-text">{heroBody}</Text>
             <Text className="hero-footnote">{heroFootnote}</Text>
