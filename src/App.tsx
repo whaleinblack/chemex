@@ -326,6 +326,8 @@ function App() {
   const t = copy[locale];
   const heroSubtitle = locale === 'zh' ? 'COF\u591a\u529f\u80fd\u8ba1\u7b97\u5de5\u5177\u7bb1' : 'Multipurpose COF Toolbox';
   const heroTitle = 'ChemEx';
+  const heroLogoAlt = 'ChemEx logo';
+  const heroLogoUrl = buildAppPath('chemex-logo.png');
   const heroBody =
     locale === 'zh'
       ? 'COF\u591a\u529f\u80fd\u8ba1\u7b97\u5de5\u5177\u7bb1\uff0c\u5df2\u63a5\u5165 SESAMI BET \u6bd4\u8868\u9762\u79ef\u4e0e ZEO\u002b\u002b \u5b54\u5f84\u5206\u5e03\u4e24\u6761\u771f\u5b9e\u8ba1\u7b97\u6d41\u7a0b\u3002'
@@ -581,9 +583,17 @@ function App() {
                 v0.5
               </Badge>
             </Group>
-            <Title order={1} className="hero-title">
-              {heroTitle}
-            </Title>
+            <div className="hero-brand-row">
+              <img className="hero-logo" src={heroLogoUrl} alt={heroLogoAlt} />
+              <Title order={1} className="hero-title">
+                <span className="hero-wordmark" aria-label={heroTitle}>
+                  <span>Che</span>
+                  <span className="hero-accent">m</span>
+                  <span>E</span>
+                  <span className="hero-accent">x</span>
+                </span>
+              </Title>
+            </div>
             <Text className="hero-text">{heroBody}</Text>
             <Text className="hero-footnote">{heroFootnote}</Text>
           </div>

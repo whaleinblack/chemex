@@ -57,11 +57,34 @@ img {
   gap: 20px;
 }
 
+.hero-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.hero-logo {
+  width: clamp(68px, 8vw, 96px);
+  height: auto;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 10px 20px rgba(34, 93, 147, 0.14));
+}
+
 .hero-title {
   max-width: 760px;
+  margin: 0;
   font-size: clamp(2.2rem, 3.8vw, 4rem);
   line-height: 1.02;
   letter-spacing: -0.04em;
+}
+
+.hero-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.hero-accent {
+  color: #2d79bf;
 }
 
 .hero-text {
@@ -481,6 +504,14 @@ img {
 
   .app-frame {
     padding: 16px;
+  }
+
+  .hero-brand-row {
+    gap: 14px;
+  }
+
+  .hero-logo {
+    width: 58px;
   }
 
   .hero-title {
