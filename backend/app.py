@@ -696,6 +696,14 @@ def frontend_assets(filename: str) -> Any:
     return send_from_directory(DIST_DIR / 'assets', filename)
 
 
+@app.get('/<path:filename>')
+def frontend_root_assets(filename: str) -> Any:
+    target = DIST_DIR / filename
+    if target.is_file():
+        return send_from_directory(DIST_DIR, filename)
+    return jsonify({'error': 'Not found'}), 404
+
+
 @app.get('/api/health')
 def health() -> Any:
     zeopp_binary, zeopp_message = detect_zeopp_binary()
