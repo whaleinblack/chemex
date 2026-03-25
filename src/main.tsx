@@ -2,6 +2,8 @@
 import ReactDOM from 'react-dom/client';
 import { createTheme, MantineColorsTuple, MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
+import '@fontsource/rajdhani/600.css';
+import '@fontsource/rajdhani/700.css';
 import App from './App';
 import './styles.css';
 
