@@ -365,7 +365,7 @@ function App() {
     const poll = async () => {
       try {
         const response = await fetch(buildAppPath(`api/jobs/${sesamiJob.jobId}`));
-        const data = (await response.json()) as JobSnapshot<SesamiResult> & { error?: string };
+        const data = await readApiJson<JobSnapshot<SesamiResult> & { error?: string }>(response, locale, t.failed);
         if (!response.ok) {
           throw new Error(data.error || t.failed);
         }
@@ -408,7 +408,7 @@ function App() {
     const poll = async () => {
       try {
         const response = await fetch(buildAppPath(`api/jobs/${zeoppJob.jobId}`));
-        const data = (await response.json()) as JobSnapshot<ZeoppResult> & { error?: string };
+        const data = await readApiJson<JobSnapshot<ZeoppResult> & { error?: string }>(response, locale, t.failed);
         if (!response.ok) {
           throw new Error(data.error || t.failed);
         }
@@ -469,7 +469,7 @@ function App() {
         method: 'POST',
         body: formData,
       });
-      const data = (await response.json()) as JobSnapshot<SesamiResult> & { error?: string };
+      const data = await readApiJson<JobSnapshot<SesamiResult> & { error?: string }>(response, locale, t.failed);
       if (!response.ok) {
         throw new Error(data.error || t.failed);
       }
@@ -505,7 +505,7 @@ function App() {
         method: 'POST',
         body: formData,
       });
-      const data = (await response.json()) as JobSnapshot<ZeoppResult> & { error?: string; hint?: string };
+      const data = await readApiJson<JobSnapshot<ZeoppResult> & { error?: string; hint?: string }>(response, locale, t.failed);
       if (!response.ok) {
         throw new Error(data.error || data.hint || t.failed);
       }
@@ -1039,6 +1039,33 @@ function detectRuntimeBasePath() {
   } catch {
     return normalizeBasePath(window.location.pathname.startsWith('/chemex/') || window.location.pathname === '/chemex' ? '/chemex/' : '/');
   }
+}
+
+async function readApiJson<T>(response: Response, locale: Locale, fallbackMessage: string): Promise<T> {
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return (await response.json()) as T;
+  }
+
+  const rawText = await response.text();
+  throw new Error(formatUnexpectedApiResponse(locale, response.status, rawText, fallbackMessage));
+}
+
+function formatUnexpectedApiResponse(locale: Locale, status: number, rawText: string, fallbackMessage: string) {
+  if (status == 413) {
+    return locale === 'zh'
+      ? '\u4e0a\u4f20\u6587\u4ef6\u8fc7\u5927\uff0c\u670d\u52a1\u5668\u62d2\u7edd\u4e86\u672c\u6b21\u8bf7\u6c42\uff08HTTP 413\uff09\u3002\u8bf7\u538b\u7f29\u6587\u4ef6\u6216\u8054\u7cfb\u7ba1\u7406\u5458\u63d0\u9ad8\u4e0a\u4f20\u4e0a\u9650\u3002'
+      : 'Upload rejected because the file is too large (HTTP 413). Compress the file or increase the server upload limit.';
+  }
+
+  const normalizedText = rawText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!normalizedText) {
+    return fallbackMessage;
+  }
+
+  return locale === 'zh'
+    ? `\u670d\u52a1\u5668\u8fd4\u56de\u4e86\u975e JSON \u54cd\u5e94\uff08HTTP ${status}\uff09\uff1a${normalizedText}`
+    : `Server returned a non-JSON response (HTTP ${status}): ${normalizedText}`;
 }
 
 function buildAppPath(path: string) {

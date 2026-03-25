@@ -1,2 +1,9 @@
-# chemex
-用于多孔材料计算的网页服务
+# ChemEx
+
+Web app for porous-material computation.
+
+## Docs
+
+- [Product Roadmap](docs/ROADMAP.md)
+- [Development Guideline](docs/GUIDELINE.md)
+- [Handoff](docs/HANDOFF.md)
