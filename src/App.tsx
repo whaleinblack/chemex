@@ -304,6 +304,7 @@ function App() {
 
   const [sesamiFile, setSesamiFile] = useState<File | null>(null);
   const [sesamiGas, setSesamiGas] = useState<string>('Argon');
+  const [sesamiVersion, setSesamiVersion] = useState<string>('2.9');
   const [sesamiSubmitting, setSesamiSubmitting] = useState(false);
   const [sesamiJob, setSesamiJob] = useState<JobSnapshot<SesamiResult> | null>(null);
   const [sesamiError, setSesamiError] = useState('');
@@ -333,6 +334,7 @@ function App() {
     locale === 'zh'
       ? '\u652f\u6301\u672c\u5730\u6587\u4ef6\u4e0a\u4f20\u3001\u4efb\u52a1\u8fdb\u5ea6\u8ddf\u8e2a\u4e0e\u7ed3\u679c\u56de\u4f20\u3002'
       : 'Supports local file upload, job progress tracking, and result inspection.';
+  const sesamiVersionLabel = locale === 'zh' ? 'SESAMI \u7248\u672c' : 'SESAMI version';
   const onlineHealthy = health?.status === 'ok';
   const sesamiHealthy = Boolean(health?.sesamiReady);
   const zeoppHealthy = Boolean(health?.zeoppReady);
@@ -459,6 +461,7 @@ function App() {
     const formData = new FormData();
     formData.append('file', sesamiFile);
     formData.append('gas', sesamiGas);
+    formData.append('version', sesamiVersion);
 
     try {
       const response = await fetch(buildAppPath('api/sesami/bet'), {
@@ -642,16 +645,28 @@ function App() {
                     </Text>
                   </Paper>
 
-                  <Select
-                    label={t.sesami.gas}
-                    value={sesamiGas}
-                    onChange={(value) => setSesamiGas(value || 'Argon')}
-                    data={[
-                      { value: 'Argon', label: 'Argon (87 K)' },
-                      { value: 'Nitrogen', label: 'Nitrogen (77 K)' },
-                    ]}
-                    radius="xl"
-                  />
+                  <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+                    <Select
+                      label={sesamiVersionLabel}
+                      value={sesamiVersion}
+                      onChange={(value) => setSesamiVersion(value || '2.9')}
+                      data={[
+                        { value: '2.9', label: 'SESAMI 2.9' },
+                        { value: '1.0', label: 'SESAMI 1.0' },
+                      ]}
+                      radius="xl"
+                    />
+                    <Select
+                      label={t.sesami.gas}
+                      value={sesamiGas}
+                      onChange={(value) => setSesamiGas(value || 'Argon')}
+                      data={[
+                        { value: 'Argon', label: 'Argon (87 K)' },
+                        { value: 'Nitrogen', label: 'Nitrogen (77 K)' },
+                      ]}
+                      radius="xl"
+                    />
+                  </SimpleGrid>
 
                   <Button
                     radius="xl"

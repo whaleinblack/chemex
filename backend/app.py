@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import ctypes
 import io
@@ -46,9 +46,11 @@ SESAMI_ROOT = ROOT / 'vendor' / 'SESAMI_web'
 os.environ.setdefault('MPLBACKEND', 'Agg')
 
 ModernBETAn = None
+BETAn = None
 SESAMI_PACKAGE_VERSION = None
-SESAMI_ENGINE = 'SESAMI legacy'
-SESAMI_STATUS_MESSAGE = 'SESAMI vendored legacy BET ready.'
+SESAMI_MODERN_ENGINE = 'SESAMI 2.9'
+SESAMI_LEGACY_ENGINE = 'SESAMI 1.0'
+SESAMI_STATUS_MESSAGE = 'SESAMI BET engines are not available.'
 
 try:
     import matplotlib as _mpl
@@ -70,21 +72,28 @@ try:
         SESAMI_PACKAGE_VERSION = version('sesami')
     except PackageNotFoundError:
         SESAMI_PACKAGE_VERSION = 'unknown'
-    SESAMI_ENGINE = f'SESAMI {SESAMI_PACKAGE_VERSION}'
-    SESAMI_STATUS_MESSAGE = f'{SESAMI_ENGINE} fitbet ready.'
+    SESAMI_MODERN_ENGINE = f'SESAMI {SESAMI_PACKAGE_VERSION}'
 except Exception:
     ModernBETAn = None
 
-BETAn = None
-if ModernBETAn is None:
+try:
     legacy_betan_path = SESAMI_ROOT / 'SESAMI' / 'SESAMI_1' / 'betan.py'
     legacy_spec = importlib.util.spec_from_file_location('chemex_legacy_sesami_betan', legacy_betan_path)
     if legacy_spec is None or legacy_spec.loader is None:
-        raise RuntimeError('Failed to load the vendored SESAMI fallback module.')
+        raise RuntimeError('Failed to load the vendored SESAMI legacy module.')
     legacy_module = importlib.util.module_from_spec(legacy_spec)
     legacy_spec.loader.exec_module(legacy_module)
     BETAn = legacy_module.BETAn
+except Exception:
+    BETAn = None
 
+sesami_status_parts: list[str] = []
+if ModernBETAn is not None:
+    sesami_status_parts.append(f'{SESAMI_MODERN_ENGINE} fitbet ready')
+if BETAn is not None:
+    sesami_status_parts.append(f'{SESAMI_LEGACY_ENGINE} legacy BET ready')
+if sesami_status_parts:
+    SESAMI_STATUS_MESSAGE = '; '.join(sesami_status_parts) + '.'
 app = Flask(__name__)
 
 BET_DEFAULTS = {
@@ -361,6 +370,7 @@ def build_modern_sesami_analyzer(gas: str):
 def build_sesami_result(
     job_id: str,
     gas: str,
+    engine: str,
     bet_result: dict[str, Any],
     points: pd.DataFrame,
     linear_region: pd.DataFrame,
@@ -371,7 +381,7 @@ def build_sesami_result(
     return {
         'jobId': job_id,
         'gas': gas,
-        'engine': SESAMI_ENGINE,
+        'engine': engine,
         'area': round(float(bet_result['A_BET']), 3),
         'qm': round(float(bet_result['qm']), 4),
         'C': round(float(bet_result['C']), 4),
@@ -389,7 +399,6 @@ def build_sesami_result(
         'selectedPoints': linear_points,
         'linearRegionPoints': linear_points,
     }
-
 
 def run_sesami_modern(job_id: str, data: pd.DataFrame, gas: str) -> dict[str, Any]:
     if ModernBETAn is None:
@@ -428,7 +437,7 @@ def run_sesami_modern(job_id: str, data: pd.DataFrame, gas: str) -> dict[str, An
     linear_region = prepared.loc[linear_mask, point_columns]
 
     advance_job(job_id, 'packaging_result', 96)
-    return build_sesami_result(job_id, gas, bet_result, prepared[point_columns], linear_region, collect_sesami_plots(job_dir))
+    return build_sesami_result(job_id, gas, SESAMI_MODERN_ENGINE, bet_result, prepared[point_columns], linear_region, collect_sesami_plots(job_dir))
 
 
 def run_sesami_legacy(job_id: str, data: pd.DataFrame, gas: str) -> dict[str, Any]:
@@ -474,6 +483,7 @@ def run_sesami_legacy(job_id: str, data: pd.DataFrame, gas: str) -> dict[str, An
     return build_sesami_result(
         job_id,
         gas,
+        SESAMI_LEGACY_ENGINE,
         bet_result,
         prepared[point_columns],
         linear_region,
@@ -481,13 +491,17 @@ def run_sesami_legacy(job_id: str, data: pd.DataFrame, gas: str) -> dict[str, An
     )
 
 
-def sesami_bet_worker(job_id: str, data: pd.DataFrame, gas: str) -> None:
+def sesami_bet_worker(job_id: str, data: pd.DataFrame, gas: str, sesami_version: str) -> None:
     try:
-        result = run_sesami_modern(job_id, data, gas) if ModernBETAn is not None else run_sesami_legacy(job_id, data, gas)
+        if sesami_version == '1.0':
+            result = run_sesami_legacy(job_id, data, gas)
+        elif sesami_version == '2.9':
+            result = run_sesami_modern(job_id, data, gas)
+        else:
+            raise ValueError(f'Unsupported SESAMI version: {sesami_version}')
         finish_job(job_id, status='completed', result=result)
     except Exception as exc:
         fail_job(job_id, str(exc))
-
 
 def detect_zeopp_binary() -> tuple[Path | None, str]:
     env_path = os.getenv('CHEMEX_ZEOPP_BIN')
@@ -720,6 +734,10 @@ def job_status(job_id: str) -> Any:
 def sesami_bet() -> Any:
     upload = request.files.get('file')
     gas = request.form.get('gas', 'Argon')
+    sesami_version = request.form.get('version', '2.9')
+
+    if sesami_version not in {'2.9', '1.0'}:
+        return jsonify({'error': 'Unsupported SESAMI version. Choose 2.9 or 1.0.'}), 400
 
     if upload is None or not upload.filename:
         return jsonify({'error': 'Please upload a CSV or AIF file.'}), 400
@@ -742,10 +760,9 @@ def sesami_bet() -> Any:
     (job_dir / upload.filename).write_bytes(raw_bytes)
 
     response_job = serialize_job(job)
-    worker = threading.Thread(target=sesami_bet_worker, args=(job['jobId'], data, gas), daemon=True)
+    worker = threading.Thread(target=sesami_bet_worker, args=(job['jobId'], data, gas, sesami_version), daemon=True)
     worker.start()
     return jsonify(response_job), 202
-
 
 @app.post('/api/zeopp/psd')
 def zeopp_psd() -> Any:
