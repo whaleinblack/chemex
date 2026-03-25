@@ -18,7 +18,6 @@ import {
   Title,
 } from '@mantine/core';
 import {
-  IconActivityHeartbeat,
   IconAtom2,
   IconDroplet,
   IconLanguage,
@@ -324,6 +323,19 @@ function App() {
   const [zeoppActionMessage, setZeoppActionMessage] = useState('');
 
   const t = copy[locale];
+  const heroSubtitle = locale === 'zh' ? 'COF\u591a\u529f\u80fd\u8ba1\u7b97\u5de5\u5177\u7bb1' : 'Multipurpose COF Toolbox';
+  const heroTitle = 'ChemEx';
+  const heroBody =
+    locale === 'zh'
+      ? 'COF\u591a\u529f\u80fd\u8ba1\u7b97\u5de5\u5177\u7bb1\uff0c\u5df2\u63a5\u5165 SESAMI BET \u6bd4\u8868\u9762\u79ef\u4e0e ZEO\u002b\u002b \u5b54\u5f84\u5206\u5e03\u4e24\u6761\u771f\u5b9e\u8ba1\u7b97\u6d41\u7a0b\u3002'
+      : 'A multipurpose COF computation toolbox with live SESAMI BET surface area and ZEO++ pore size distribution workflows.';
+  const heroFootnote =
+    locale === 'zh'
+      ? '\u652f\u6301\u672c\u5730\u6587\u4ef6\u4e0a\u4f20\u3001\u4efb\u52a1\u8fdb\u5ea6\u8ddf\u8e2a\u4e0e\u7ed3\u679c\u56de\u4f20\u3002'
+      : 'Supports local file upload, job progress tracking, and result inspection.';
+  const onlineHealthy = health?.status === 'ok';
+  const sesamiHealthy = Boolean(health?.sesamiReady);
+  const zeoppHealthy = Boolean(health?.zeoppReady);
   const sesamiBusy = sesamiSubmitting || Boolean(sesamiJob && ACTIVE_JOB_STATUSES.includes(sesamiJob.status));
   const zeoppBusy = zeoppSubmitting || Boolean(zeoppJob && ACTIVE_JOB_STATUSES.includes(zeoppJob.status));
   const sesamiProgress = sesamiBusy ? (sesamiJob?.progress ?? 2) : 0;
@@ -560,17 +572,17 @@ function App() {
           <div>
             <Group gap="sm" mb={10}>
               <Badge variant="light" color="ocean" radius="xl">
-                {t.subtitle}
+                {heroSubtitle}
               </Badge>
               <Badge variant="white" radius="xl" className="ghost-badge">
-                local prototype
+                v0.5
               </Badge>
             </Group>
             <Title order={1} className="hero-title">
-              {t.heroTitle}
+              {heroTitle}
             </Title>
-            <Text className="hero-text">{t.heroBody}</Text>
-            <Text className="hero-footnote">{t.heroFootnote}</Text>
+            <Text className="hero-text">{heroBody}</Text>
+            <Text className="hero-footnote">{heroFootnote}</Text>
           </div>
 
           <Paper className="language-switch" radius="xl">
@@ -595,23 +607,6 @@ function App() {
           </Paper>
         </Group>
 
-        <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md" className="stats-grid">
-          <StatusCard
-            label={t.health.online}
-            value={health?.status === 'ok' ? 'Online' : '...'}
-            hint={health ? 'API ready' : 'Checking'}
-          />
-          <StatusCard
-            label={t.health.sesami}
-            value={health?.sesamiReady ? 'Ready' : '...'}
-            hint={health?.sesamiMessage || 'SESAMI BET engine'}
-          />
-          <StatusCard
-            label={t.health.zeopp}
-            value={health?.zeoppReady ? 'Ready' : 'Blocked'}
-            hint={zeoppStatus?.message || health?.zeoppMessage || 'Checking'}
-          />
-        </SimpleGrid>
 
         <Tabs value={activeTab} onChange={(value) => setActiveTab((value as ToolKey) || 'sesami')} className="workspace-tabs">
           <Tabs.List className="glass-tabs-list">
@@ -892,14 +887,34 @@ function App() {
         </Tabs>
 
         <Paper className="footer-note" radius="xl">
-          <Group justify="space-between">
-            <Text size="sm">ChemEx Workspace</Text>
-            <Group gap="xs">
-              <IconActivityHeartbeat size={16} />
-              <Text size="sm">SESAMI: {health?.sesamiReady ? 'Ready' : '...'}</Text>
-              <Text size="sm">ZEO++: {health?.zeoppReady ? 'Ready' : 'Blocked'}</Text>
-            </Group>
-          </Group>
+          <div className="footer-status-bar">
+            <div>
+              <Text className="footer-brand">ChemEx</Text>
+              <Text className="footer-subcopy">
+                {locale === 'zh' ? 'COF\u591a\u529f\u80fd\u8ba1\u7b97\u5de5\u5177\u7bb1 \u00b7 v0.5' : 'Multipurpose COF Toolbox \u00b7 v0.5'}
+              </Text>
+            </div>
+            <div className="status-pill-group">
+              <CompactStatusPill
+                label={t.health.online}
+                value={onlineHealthy ? (locale === 'zh' ? '\u6b63\u5e38' : 'Online') : '...'}
+                hint={health ? (locale === 'zh' ? 'API \u5df2\u5c31\u7eea' : 'API ready') : 'Checking'}
+                ok={onlineHealthy}
+              />
+              <CompactStatusPill
+                label={t.health.sesami}
+                value={sesamiHealthy ? 'Ready' : '...'}
+                hint={health?.sesamiMessage || 'SESAMI BET engine'}
+                ok={sesamiHealthy}
+              />
+              <CompactStatusPill
+                label={t.health.zeopp}
+                value={zeoppHealthy ? 'Ready' : 'Blocked'}
+                hint={zeoppStatus?.message || health?.zeoppMessage || 'Checking'}
+                ok={zeoppHealthy}
+              />
+            </div>
+          </div>
         </Paper>
       </Paper>
 
@@ -922,20 +937,18 @@ function App() {
   );
 }
 
-function StatusCard({ label, value, hint }: { label: string; value: string; hint: string }) {
+function CompactStatusPill({ label, value, hint, ok }: { label: string; value: string; hint: string; ok: boolean }) {
   return (
-    <Paper className="glass-card stat-card" radius="xl">
-      <Text size="sm" c="dimmed">
-        {label}
-      </Text>
-      <Text className="stat-value">{value}</Text>
-      <Text size="sm" className="stat-hint">
-        {hint}
-      </Text>
-    </Paper>
+    <div className={ok ? 'status-pill is-ok' : 'status-pill is-pending'} title={[label, hint].join(': ')}>
+      <span className="status-pill-dot" aria-hidden="true" />
+      <div className="status-pill-content">
+        <Text className="status-pill-label">{label}</Text>
+        <Text className="status-pill-value">{value}</Text>
+        <Text className="status-pill-hint">{hint}</Text>
+      </div>
+    </div>
   );
 }
-
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <Paper className="cluster-card" radius="xl">
