@@ -39,3 +39,4 @@ backend.err.log
 backend-server*.log
 backend-8001.*
 backend-server-8001.*
+id_ed25519_github
