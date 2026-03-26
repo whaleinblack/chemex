@@ -11,17 +11,27 @@ from pathlib import Path
 from typing import Any, Callable
 
 
+def _matches_python_tag(directory: Path, pattern: str) -> bool:
+    binaries = list(directory.glob(pattern))
+    if not binaries:
+        return True
+
+    python_tag = f'cp{sys.version_info.major}{sys.version_info.minor}'
+    return any(python_tag in binary.name for binary in binaries)
+
+
 def _add_dependency_path(candidate: Path) -> None:
     if not candidate.exists() or str(candidate) in sys.path:
         return
 
-    numpy_core = candidate / 'numpy' / '_core'
-    if numpy_core.exists():
-        binaries = list(numpy_core.glob('_multiarray_umath*.pyd'))
-        if binaries:
-            python_tag = f'cp{sys.version_info.major}{sys.version_info.minor}'
-            if not any(python_tag in binary.name for binary in binaries):
-                return
+    checks = [
+        (candidate / 'numpy' / '_core', '_multiarray_umath*.pyd'),
+        (candidate / 'pandas' / '_libs', 'pandas_parser*.pyd'),
+    ]
+
+    for directory, pattern in checks:
+        if directory.exists() and not _matches_python_tag(directory, pattern):
+            return
 
     sys.path.insert(0, str(candidate))
 
@@ -619,6 +629,8 @@ def run_workflow(
         }
 
     return base_result
+
+
 
 
 

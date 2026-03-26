@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import json
@@ -35,11 +35,36 @@ def resolve_runtime_root() -> Path:
     return runtime_root
 
 
+def matches_python_tag(directory: Path, pattern: str) -> bool:
+    binaries = list(directory.glob(pattern))
+    if not binaries:
+        return True
+
+    python_tag = f'cp{sys.version_info.major}{sys.version_info.minor}'
+    return any(python_tag in binary.name for binary in binaries)
+
+
+def add_dependency_path(candidate: Path) -> None:
+    if not candidate.exists() or str(candidate) in sys.path:
+        return
+
+    checks = [
+        (candidate / 'numpy' / '_core', '_multiarray_umath*.pyd'),
+        (candidate / 'pandas' / '_libs', 'pandas_parser*.pyd'),
+    ]
+
+    for directory, pattern in checks:
+        if directory.exists() and not matches_python_tag(directory, pattern):
+            return
+
+    sys.path.insert(0, str(candidate))
+
+
 APP_ROOT = resolve_app_root()
 RUNTIME_ROOT = resolve_runtime_root()
 PYDEPS = APP_ROOT / 'pydeps'
-if PYDEPS.exists() and str(PYDEPS) not in sys.path:
-    sys.path.insert(0, str(PYDEPS))
+if getattr(sys, 'frozen', False):
+    add_dependency_path(PYDEPS)
 os.environ.setdefault('CHEMEX_APP_ROOT', str(APP_ROOT))
 os.environ.setdefault('CHEMEX_RUNTIME_ROOT', str(RUNTIME_ROOT))
 os.environ.setdefault('MPLBACKEND', 'Agg')
@@ -54,6 +79,7 @@ def log(message: str) -> None:
             handle.write(f'[{timestamp}] {message}\n')
     except OSError:
         pass
+
 
 from werkzeug.serving import make_server
 from backend.app import app
@@ -199,6 +225,45 @@ def run_browser_shell(server: LocalServer) -> int:
     return 0
 
 
+def run_embedded_shell(server: LocalServer) -> int:
+    try:
+        import webview
+    except Exception as exc:
+        log(f'Embedded webview is unavailable, falling back to browser shell: {exc!r}')
+        return run_browser_shell(server)
+
+    closed = False
+
+    def handle_closed() -> None:
+        nonlocal closed
+        if closed:
+            return
+        closed = True
+        log('Embedded ChemEx window closed')
+        server.stop()
+
+    try:
+        window = webview.create_window(
+            'ChemEx',
+            server.url,
+            width=1440,
+            height=960,
+            min_size=(1180, 760),
+            background_color='#edf3fb',
+            text_select=True,
+            confirm_close=True,
+        )
+        window.events.closed += handle_closed
+        log(f'Launching embedded ChemEx window at {server.url}')
+        webview.start(debug=False)
+        return 0
+    except Exception as exc:
+        log(f'Embedded webview failed, falling back to browser shell: {exc!r}')
+        if not closed and server._thread.is_alive():
+            return run_browser_shell(server)
+        raise
+
+
 def run_self_test() -> int:
     server = LocalServer()
     server.start()
@@ -215,7 +280,7 @@ def run_desktop() -> int:
     server = LocalServer()
     server.start()
     try:
-        return run_browser_shell(server)
+        return run_embedded_shell(server)
     finally:
         if server._thread.is_alive():
             server.stop()

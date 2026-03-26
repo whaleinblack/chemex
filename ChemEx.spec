@@ -13,11 +13,13 @@ datas = [
 
 binaries = collect_dynamic_libs('pandas._libs')
 pandas_hiddenimports = collect_submodules('pandas._libs')
+webview_hiddenimports = collect_submodules('webview')
 
 hiddenimports = [
     'appdirs',
     'matplotlib.backends.backend_agg',
-] + pandas_hiddenimports
+    'webview',
+] + pandas_hiddenimports + webview_hiddenimports
 
 block_cipher = None
 
@@ -60,5 +62,6 @@ coll = COLLECT(
     upx_exclude=[],
     name='ChemEx',
 )
+
 
 
