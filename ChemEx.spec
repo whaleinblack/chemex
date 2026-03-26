@@ -1,6 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
+
 project_dir = Path(SPECPATH)
 
 datas = [
@@ -9,16 +11,20 @@ datas = [
     (str(project_dir / 'vendor' / 'zeopp-lsmo' / 'zeo++'), 'vendor/zeopp-lsmo/zeo++'),
 ]
 
+binaries = collect_dynamic_libs('pandas._libs')
+pandas_hiddenimports = collect_submodules('pandas._libs')
+
 hiddenimports = [
+    'appdirs',
     'matplotlib.backends.backend_agg',
-]
+] + pandas_hiddenimports
 
 block_cipher = None
 
 a = Analysis(
     ['desktop_launcher.py'],
     pathex=[str(project_dir)],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
@@ -54,3 +60,5 @@ coll = COLLECT(
     upx_exclude=[],
     name='ChemEx',
 )
+
+
