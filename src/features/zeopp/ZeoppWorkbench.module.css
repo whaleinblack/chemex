@@ -1,0 +1,249 @@
+.panel {
+  padding: 24px;
+}
+
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.heroCopy {
+  min-width: 0;
+  max-width: 780px;
+}
+
+.subtitle {
+  margin-top: 6px;
+  color: rgba(19, 38, 58, 0.64);
+  line-height: 1.7;
+}
+
+.runtimeBadge {
+  align-self: flex-start;
+}
+
+.subtabsList {
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(245, 248, 251, 0.94);
+  border: 1px solid rgba(220, 229, 238, 0.9);
+}
+
+.subtabsList :global(.mantine-Tabs-tab) {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.subtabsList :global(.mantine-Tabs-tab[data-active='true']) {
+  background: linear-gradient(180deg, #4d96d8, #2f75b8);
+  color: white;
+}
+
+.workspace {
+  display: grid;
+  gap: 18px;
+}
+
+.workspaceGrid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+}
+
+.contentCard,
+.outputCard,
+.resultCard {
+  min-width: 0;
+  padding: 20px;
+}
+
+.sectionTitle {
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.sectionHint {
+  margin-top: 6px;
+  color: rgba(19, 38, 58, 0.64);
+  line-height: 1.6;
+}
+
+.formGrid {
+  display: grid;
+  gap: 14px;
+}
+
+.fieldGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fieldWide {
+  grid-column: 1 / -1;
+}
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.progressBarWrap {
+  margin-top: 12px;
+}
+
+.statusNote {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(245, 252, 248, 0.9), rgba(239, 249, 243, 0.86));
+  border: 1px solid rgba(49, 150, 102, 0.2);
+}
+
+.statusNoteNeutral {
+  background: linear-gradient(180deg, rgba(247, 250, 253, 0.94), rgba(241, 246, 251, 0.9));
+  border-color: rgba(189, 203, 218, 0.7);
+}
+
+.metricGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metricCard {
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(220, 229, 238, 0.95);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 253, 0.93));
+}
+
+.metricLabel {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  color: #4a769c;
+}
+
+.metricValue {
+  margin-top: 6px;
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.metricHint {
+  margin-top: 4px;
+  font-size: 0.82rem;
+  color: rgba(19, 38, 58, 0.62);
+}
+
+.resultLayout {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border-radius: 20px;
+  border: 1px solid rgba(220, 229, 238, 0.95);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.rawHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.smallMuted {
+  color: rgba(19, 38, 58, 0.6);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(220, 229, 238, 0.95);
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 12px;
+}
+
+.plotCard {
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(220, 229, 238, 0.95);
+  background: linear-gradient(180deg, #fbfdff, #f0f6fb);
+}
+
+.plotWrap {
+  margin-top: 10px;
+}
+
+.outputBody {
+  margin-top: 12px;
+}
+
+.footerRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.runtimeBanner {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(49, 150, 102, 0.18);
+  background: linear-gradient(180deg, rgba(245, 252, 248, 0.92), rgba(239, 249, 243, 0.88));
+}
+
+.runtimeBannerOff {
+  border-color: rgba(189, 203, 218, 0.7);
+  background: linear-gradient(180deg, rgba(247, 250, 253, 0.94), rgba(241, 246, 251, 0.9));
+}
+
+@media (max-width: 960px) {
+  .workspaceGrid,
+  .resultLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,4 +1,4 @@
-# Node / frontend
+﻿# Node / frontend
 node_modules/
 dist/
 *.tsbuildinfo
@@ -40,3 +40,17 @@ backend-server*.log
 backend-8001.*
 backend-server-8001.*
 id_ed25519_github
+
+# Desktop packaging
+.packenv/
+desktop-dist/
+build/desktop/
+
+.pyuserbase/
+.desktop-runtime/
+.desktop-runtime-test/
+tmp/
+desktop-dist-onefile/
+build/desktop-onefile/
+
+.venv-dev/

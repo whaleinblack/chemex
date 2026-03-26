@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   color: #13263a;
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   background:
@@ -543,5 +543,151 @@ img {
   .status-pill {
     max-width: none;
     width: 100%;
+  }
+}
+
+.hero-subtitle {
+  margin-top: 4px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(24, 55, 84, 0.72);
+}
+
+.subtabs-list::before {
+  display: none;
+}
+
+.subtabs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 24px;
+  background: rgba(244, 248, 251, 0.92);
+  border: 1px solid rgba(220, 229, 238, 0.92);
+}
+
+.subtabs-list .mantine-Tabs-tab {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.subtabs-list .mantine-Tabs-tab[data-active="true"] {
+  background: linear-gradient(180deg, rgba(77, 150, 216, 0.18), rgba(47, 117, 184, 0.14));
+  color: #205f96;
+}
+
+.hero-subtitle-row {
+  width: fit-content;
+}
+
+.hero-subtitle {
+  margin-top: 0;
+}
+
+.guide-help-button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(78, 128, 176, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 249, 253, 0.9));
+  box-shadow: 0 8px 18px rgba(36, 89, 133, 0.08);
+  color: #2d79bf;
+  flex: 0 0 auto;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.guide-help-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(45, 121, 191, 0.28);
+  box-shadow: 0 12px 24px rgba(36, 89, 133, 0.12);
+}
+
+.guide-help-mark {
+  font-size: 0.94rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.guide-modal-content {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 249, 252, 0.96));
+  border: 1px solid rgba(220, 229, 238, 0.95);
+  box-shadow: 0 20px 48px rgba(31, 74, 112, 0.12);
+}
+
+.guide-modal-header {
+  padding-bottom: 6px;
+}
+
+.guide-modal-title {
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.guide-modal-body {
+  padding-top: 0;
+}
+
+.guide-intro {
+  line-height: 1.72;
+  color: rgba(19, 38, 58, 0.78);
+}
+
+.guide-section-card {
+  padding: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 250, 253, 0.92));
+  border: 1px solid rgba(220, 229, 238, 0.94);
+  box-shadow: 0 8px 24px rgba(28, 71, 109, 0.05);
+}
+
+.guide-section-title {
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4a769c;
+}
+
+.guide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.guide-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.65;
+  color: rgba(19, 38, 58, 0.76);
+}
+
+.guide-list-bullet {
+  width: 7px;
+  height: 7px;
+  margin-top: 9px;
+  border-radius: 999px;
+  background: #2d79bf;
+  box-shadow: 0 0 0 4px rgba(45, 121, 191, 0.12);
+  flex: 0 0 auto;
+}
+
+.guide-note {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: rgba(19, 38, 58, 0.62);
+}
+
+@media (max-width: 900px) {
+  .hero-subtitle-row {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .guide-help-button {
+    width: 26px;
+    height: 26px;
   }
 }
