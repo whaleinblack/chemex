@@ -374,7 +374,7 @@ export function SesamiWorkbench({ locale }: Props) {
         mode: mode as SesamiSubtab,
         file,
         gas,
-        version: mode === 'betEsw' || mode === 'betMl' ? '2.9' : version,
+        version: mode === 'betEsw' || mode === 'betMl' || mode === 'compare' ? '2.9' : version,
         advanced:
           subtab === 'advanced'
             ? {
@@ -519,7 +519,7 @@ export function SesamiWorkbench({ locale }: Props) {
         ) : null}
 
         {job ? <Text className="progress-meta">{job.stage} · {job.progress}%</Text> : null}
-        {error ? <Text className="error-text">{error}</Text> : null}
+        {error || job?.error ? <Text role="alert" className="error-text">{error ?? job?.error}</Text> : null}
         {job?.warning ? <Text className="notice-text">{job.warning}</Text> : null}
 
         <SubmitButton
@@ -610,7 +610,6 @@ export function SesamiWorkbench({ locale }: Props) {
     </Stack>
   );
 }
-
 
 
 

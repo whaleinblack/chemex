@@ -4,12 +4,14 @@
 
 ChemEx is a bilingual web application for porous-material and COF computation.
 
-Current live scientific workflows:
+Repository capability audit: `2026-10-07`, main `85ad2ff82f1079f08e89d5cf2d0222da10059e30`. This describes repository code, not a fresh production verification. GitHub returned no PRs, workflow runs, check runs, or commit statuses for this baseline.
 
-- `SESAMI BET`
-  - `SESAMI 2.9`
-  - `SESAMI 1.0`
-- `ZEO++ PSD`
+Implemented backend APIs and exposed frontend workflows:
+
+- SESAMI BET (2.9 / 1.0), BET+ESW (2.9), BET-ML (2.9), Compare, and Advanced fit controls
+- ZEO++ PSD, RES / RESEX, CHAN, SA, VOL, VOLPO
+
+See [verification evidence](VERIFICATION.md) for test coverage and runtime limitations.
 
 The product is no longer tied only to `chufa.wang/chemex/`.
 It now supports:
@@ -28,7 +30,10 @@ Current public domains:
 
 Key paths:
 
-- `src/App.tsx` -> main frontend UI and client-side workflow logic
+- `src/App.tsx` -> top-level tool selection
+- `src/features/sesami/SesamiWorkbench.tsx` -> SESAMI modes, parameters, results
+- `src/features/zeopp/ZeoppWorkbench.tsx` -> ZEO++ modes, parameters, results
+- `src/lib/api.ts` -> relative API endpoints and multipart requests
 - `src/styles.css` -> product styling
 - `src/main.tsx` -> frontend bootstrap and font imports
 - `backend/app.py` -> Flask app, job execution, parsing, static serving
@@ -79,12 +84,14 @@ Supported now:
 - enlarge plots
 - inspect BET fitting region points
 
-Not yet done:
+Backend implemented and frontend exposed:
 
-- `BET+ESW` as first-class UI mode
-- `betml`
-- advanced fit parameter panel
-- richer comparison across versions
+- BET+ESW and BET-ML as first-class tabs (fixed to 2.9)
+- Compare: modern BET / BET+ESW, plus legacy BET and ML when their dependencies are available
+- Advanced: BET / BET+ESW with R² cutoffs, DPI, font size, legend controls
+- area / fit cards, comparison warnings, plots and selected-region points
+
+Verification: five real Argon example workflows pass benchmark assertions. BET-ML retains an upstream scikit-learn model-version warning. Compare optional engine exceptions can still fail the job; cross-environment stability is not established.
 
 
 ### 4.2 ZEO++
@@ -92,7 +99,9 @@ Not yet done:
 Supported now:
 
 - upload structure file
-- run `PSD`
+- choose `PSD`, `RES / RESEX`, `CHAN`, `SA`, `VOL`, or `VOLPO`
+- control standard/extended RES, CHAN probe radius, or sampling radii and sample count
+- view numeric metrics with units, channel summary, and raw output
 - real stage-driven progress
 - PSD chart with labels and units
 - hover coordinate display
@@ -103,7 +112,9 @@ Important limitation:
 
 - current uploaded structure is passed to the runtime largely as-is
 - a robust preprocessing / normalization pipeline is still missing
-- current product has not yet exposed `-res`, `-chan`, `-sa`, `-vol`, `-volpo`
+- all six modes are exposed through `ZeoppWorkbench` and `src/lib/api.ts`
+- command/API contracts and vendored reference parsers are tested; VOLPO uses a synthetic parser fixture
+- no compiled `network` binary is present in the checkout: real ZEO++ execution remains unverified on this machine
 
 
 ## 5. Runtime and Job Model
@@ -129,8 +140,8 @@ Current endpoints:
 - `GET /api/health`
 - `GET /api/zeopp/status`
 - `GET /api/jobs/<job_id>`
-- `POST /api/sesami/bet`
-- `POST /api/zeopp/psd`
+- `POST /api/sesami/bet`, `/api/sesami/bet-esw`, `/api/sesami/betml`, `/api/sesami/compare`
+- `POST /api/zeopp/psd`, `/api/zeopp/res`, `/api/zeopp/chan`, `/api/zeopp/sa`, `/api/zeopp/vol`, `/api/zeopp/volpo`
 - `GET /api/artifacts/<job_id>/<filename>`
 
 Static serving:
@@ -265,14 +276,10 @@ Rule:
 
 Highest-value next tasks:
 
-1. add ZEO++ `-res`
-2. add ZEO++ `-chan`
-3. add ZEO++ `-sa`
-4. add ZEO++ `-vol`
-5. add ZEO++ `-volpo`
-6. add SESAMI `BET+ESW`
-7. add persistent job storage
-8. add `pymatgen` preprocessing for CIF
+1. run all ZEO++ modes against a compiled runtime and representative inputs
+2. validate SESAMI supported dependency versions, model compatibility and Compare optional failures
+3. add `pymatgen` preprocessing for CIF
+4. plan persistent job storage as a separate platform change; `JOBS` remains in memory in this PR
 
 
 ## 12. Notes for the Next Developer

@@ -21,7 +21,7 @@ Current domain split:
 
 ## 2. Current Baseline
 
-As of `2026-03-26`, ChemEx already has:
+As audited on `2026-10-07` at main `85ad2ff`, ChemEx repository code already has (production deployment is not reverified here):
 
 - React + TypeScript + Vite + Mantine frontend
 - Chinese / English UI switching
@@ -29,11 +29,26 @@ As of `2026-03-26`, ChemEx already has:
 - SESAMI tab with version selector:
   - `SESAMI 2.9`
   - `SESAMI 1.0`
-- ZEO++ tab with live PSD workflow
+- ZEO++ tabs: PSD, RES / RESEX, CHAN, SA, VOL, VOLPO
+- SESAMI BET+ESW, BET-ML, Compare and Advanced tabs
+- separate backend service adapters and frontend API/workbench modules
 - backend-driven job progress polling
 - figure gallery, enlarged preview, raw output export, and artifact serving
 - root-domain and subpath compatible frontend asset resolution
-- production deployment on a shared server with domain separation
+- documented production deployment on a shared server with domain separation
+
+### Capability state
+
+| Capability | Backend implemented | Frontend exposed | Verification |
+| --- | --- | --- | --- |
+| SESAMI BET 2.9 / 1.0 | Yes | Yes | Real Argon example benchmarks pass |
+| SESAMI BET+ESW | Yes (2.9) | Yes | Real example benchmark passes; requires an ESW minimum |
+| SESAMI BET-ML | Yes (2.9) | Yes | Real example passes; upstream model-version warning remains |
+| SESAMI Compare | Yes | Yes | Four counterparts verified on example; optional engine failures need hardening |
+| ZEO++ PSD / RES / CHAN / SA / VOL | Yes | Yes | Commands, API and reference parsing tested; real binary unavailable locally |
+| ZEO++ VOLPO | Yes | Yes | Commands/API and synthetic parser fixture tested; real binary unverified |
+
+Evidence and reproducible commands: [VERIFICATION.md](VERIFICATION.md). Implemented/exposed does not imply production readiness.
 
 This is the base for the next phases. The roadmap below assumes we keep ChemEx focused on porous-material computation rather than turning it into a generic file portal.
 
@@ -116,14 +131,13 @@ Goal: make the current two-tool foundation trustworthy for daily internal use.
 Scope:
 
 - ZEO++:
-  - add `-res`
-  - add `-chan`
+  - validate existing `-res` / `-resex` and `-chan` against compiled runtimes
   - improve PSD result labeling and parameter guidance
   - standardize warnings when Windows runtime returns non-zero after writing output
 - SESAMI:
-  - expose `BET+ESW`
+  - validate existing `BET+ESW` across representative isotherms
   - make SESAMI version choice visible in result cards and exports
-  - expose a small set of advanced fit controls in an expert panel
+  - validate existing advanced fit controls and bounds
 - Shared:
   - stronger upload validation
   - clearer units everywhere
@@ -143,9 +157,7 @@ Goal: turn the ZEO++ tab into a genuinely useful geometry suite instead of a PSD
 
 Scope:
 
-- add `-sa`
-- add `-vol`
-- add `-volpo`
+- validate existing `-sa`, `-vol`, `-volpo` workflows against compiled runtimes
 - show channel / pocket contributions when present
 - support result comparison across multiple runs
 - add csv / json export for normalized numeric outputs
@@ -168,7 +180,7 @@ Goal: expand SESAMI into a broader adsorption-analysis workspace.
 
 Scope:
 
-- add `betml`
+- validate existing `betml` model/dependency compatibility
 - integrate `pyGAPS` for model-driven isotherm analysis
 - add Henry / Langmuir / selected isotherm fitting
 - support richer upload metadata
@@ -237,12 +249,8 @@ Possible headline capability:
 
 High priority:
 
-- `-res`
-- `-resex`
-- `-chan`
-- `-sa`
-- `-vol`
-- `-volpo`
+- runtime benchmark coverage for existing `-res`, `-resex`, `-chan`, `-sa`, `-vol`, `-volpo`
+- parsing validation for missing/malformed metrics and channel/pocket arrays
 
 Medium priority:
 
@@ -264,14 +272,14 @@ Advanced / visualization:
 
 High priority:
 
-- `BET+ESW`
-- `betml`
+- broader benchmark coverage for existing `BET+ESW` and `betml`
+- pinned, validated scientific dependency/model combinations
 - richer advanced fit controls
 - adsorbate-specific expert options
 
 Medium priority:
 
-- result comparison between `1.0` and `2.9`
+- harden existing comparison between `1.0` and `2.9` (partial failures and metadata)
 - better plot annotations
 - automated markdown / pdf report export
 
@@ -289,9 +297,9 @@ Medium priority:
 
 If we only fund one next sprint, the best return is:
 
-1. ZEO++ `-res`, `-chan`, `-sa`, `-vol`, `-volpo`
-2. SESAMI `BET+ESW`
+1. Real-runtime regression coverage for already implemented/exposed ZEO++ modes
+2. SESAMI dependency/model compatibility and Compare partial-failure handling
 3. CIF preprocessing via `pymatgen`
-4. persistent job/result storage
+4. persistent job/result storage as a separate future change
 
 That combination would move ChemEx from “working prototype” to “real internal research tool.”

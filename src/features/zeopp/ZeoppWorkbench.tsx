@@ -536,7 +536,7 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
               ) : null}
 
               {job ? <Text className="progress-meta">{job.stage} · {job.progress}%</Text> : null}
-              {error ? <Text className="error-text">{error}</Text> : null}
+              {error || job?.error ? <Text role="alert" className="error-text">{error ?? job?.error}</Text> : null}
               {job?.warning ? <Text className="notice-text">{job.warning}</Text> : null}
 
               <SubmitButton loading={Boolean(running)} progress={job?.progress ?? 0} label={t.run} disabled={!zeoppReady} />
@@ -589,7 +589,7 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
                           radius="xl"
                           variant="light"
                           leftSection={<IconDownload size={16} />}
-                          onClick={() => downloadTextArtifact(`chemex-${subtab}.txt`, rawOutput)}
+                          onClick={() => downloadTextArtifact(`chemex-${result.mode ?? subtab}.txt`, rawOutput)}
                         >
                           {t.exportTxt}
                         </Button>
@@ -597,7 +597,7 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
                           radius="xl"
                           variant="light"
                           leftSection={<IconDownload size={16} />}
-                          onClick={() => downloadTextArtifact(`chemex-${subtab}.md`, rawMarkdown)}
+                          onClick={() => downloadTextArtifact(`chemex-${result.mode ?? subtab}.md`, rawMarkdown)}
                         >
                           {t.exportMd}
                         </Button>
