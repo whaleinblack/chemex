@@ -198,7 +198,7 @@ Examples:
 
 - `/api/sesami/bet`
 - `/api/zeopp/psd`
-- future `/api/zeopp/sa`
+- `/api/zeopp/sa`
 - future `/api/pygaps/model-fit`
 
 Keep tool namespaces isolated so integrations do not bleed into one another.
@@ -235,14 +235,10 @@ Rules:
 
 ### 6.1 Current Reality
 
-`backend/app.py` currently contains:
-
-- routing
-- upload parsing
-- SESAMI adapters
-- ZEO++ runtime detection
-- job handling
-- static file serving
+`backend/app.py` contains routing, in-memory job handling and static/artifact serving.
+Scientific parsing and execution live in `backend/services_sesami.py` and `backend/services_zeopp.py`.
+Frontend modes live in feature workbenches and `src/lib/api.ts`; inspect those before concluding an API has no UI entry.
+Track backend implementation, frontend exposure and runtime verification separately (see `docs/VERIFICATION.md`).
 
 This is acceptable for the current prototype stage, but future work should gradually split it.
 
