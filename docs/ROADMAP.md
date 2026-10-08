@@ -279,6 +279,7 @@ Medium priority:
 ## 7. Platform Risks to Watch
 
 - Jobs are currently in memory, so service restart loses job state.
+- ZEO++ now persists execution metadata and stdout/stderr for diagnosis and defaults to a configurable 1800-second engine deadline; durable job polling and restart recovery remain outstanding.
 - Backend logic is concentrated in a single `backend/app.py`, which is fine for fast iteration but not ideal for long-term maintainability.
 - ZEO++ currently accepts uploaded structure files as provided; robust preprocessing and normalization are still thin.
 - Scientific semantics must always follow upstream documentation, not UI convenience assumptions.

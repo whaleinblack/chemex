@@ -42,6 +42,8 @@ type ZeoppStrings = {
   pending: string;
   emptyTitle: string;
   emptyBody: string;
+  failedTitle: string;
+  failedBody: string;
   rawOutput: string;
   series: string;
   count: string;
@@ -84,6 +86,8 @@ const copy: Record<Locale, ZeoppStrings> = {
     pending: '提交后会显示真实任务进度、结构化结果与原始输出。',
     emptyTitle: '等待结果',
     emptyBody: '当前 subtab 已接入真实 ZEO++ 命令执行与 job 轮询。',
+    failedTitle: '计算失败',
+    failedBody: '请根据错误提示调整参数或输入文件，然后重试。',
     rawOutput: '原始输出',
     series: '曲线',
     count: 'Count',
@@ -124,6 +128,8 @@ const copy: Record<Locale, ZeoppStrings> = {
     pending: 'Real job progress, structured outputs, and raw command output will appear after submission.',
     emptyTitle: 'Waiting for results',
     emptyBody: 'This subtab is already wired to real ZEO++ command execution and job polling.',
+    failedTitle: 'Calculation failed',
+    failedBody: 'Review the error, adjust the parameters or input file, and try again.',
     rawOutput: 'Raw output',
     series: 'Series',
     count: 'Count',
@@ -391,6 +397,7 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
 
   const running = job?.status === 'queued' || job?.status === 'running';
   const result = job?.result ?? null;
+  const displayError = error || job?.error;
 
   const submit = async () => {
     if (!file) {
@@ -535,8 +542,8 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
                 </SimpleGrid>
               ) : null}
 
-              {job ? <Text className="progress-meta">{job.stage} · {job.progress}%</Text> : null}
-              {error ? <Text className="error-text">{error}</Text> : null}
+              {job ? <Text className="progress-meta">{job.status === 'failed' ? t.failedTitle : `${job.stage} · ${job.progress}%`}</Text> : null}
+              {displayError ? <Text role="alert" className="error-text">{displayError}</Text> : null}
               {job?.warning ? <Text className="notice-text">{job.warning}</Text> : null}
 
               <SubmitButton loading={Boolean(running)} progress={job?.progress ?? 0} label={t.run} disabled={!zeoppReady} />
@@ -609,9 +616,9 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
               </Stack>
             ) : (
               <Paper radius={24} className="result-preview">
-                <div className="result-preview-label">Pending Result</div>
-                <div className="result-preview-title">{t.emptyTitle}</div>
-                <div className="result-preview-text">{t.emptyBody}</div>
+                <div className="result-preview-label">{job?.status === 'failed' ? 'ZEO++' : 'Pending Result'}</div>
+                <div className="result-preview-title">{job?.status === 'failed' ? t.failedTitle : t.emptyTitle}</div>
+                <div className="result-preview-text">{job?.status === 'failed' ? t.failedBody : t.emptyBody}</div>
               </Paper>
             )}
           </Stack>

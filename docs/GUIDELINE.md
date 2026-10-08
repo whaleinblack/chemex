@@ -214,6 +214,7 @@ That directory should contain:
 
 - original upload when useful
 - engine output files
+- ZEO++ execution metadata (`zeopp-run.json`) and streamed stdout/stderr logs, including failed runs
 - rendered plots
 - structured summaries where possible
 

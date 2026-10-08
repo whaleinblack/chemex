@@ -1,12 +1,16 @@
 ﻿from __future__ import annotations
 
 import ctypes
+import json
+import math
 import os
 import re
 import subprocess
+import threading
+import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, TextIO
 
 ROOT = Path(__file__).resolve().parents[1]
 ZEOPP_RUNTIME_DIR = ROOT / 'vendor' / 'zeopp-lsmo' / 'zeo++'
@@ -16,6 +20,18 @@ ZEOPP_TOOLCHAIN_USR_BIN = ROOT / 'zeopp-toolchain' / 'Library' / 'usr' / 'bin'
 SEM_FAILCRITICALERRORS = 0x0001
 SEM_NOGPFAULTERRORBOX = 0x0002
 SEM_NOOPENFILEERRORBOX = 0x8000
+DEFAULT_ZEOPP_TIMEOUT_SECONDS = 1800
+
+
+def get_zeopp_timeout_seconds() -> float:
+    value = os.getenv('CHEMEX_ZEOPP_TIMEOUT_SECONDS', str(DEFAULT_ZEOPP_TIMEOUT_SECONDS))
+    try:
+        seconds = float(value)
+    except ValueError as exc:
+        raise ValueError('CHEMEX_ZEOPP_TIMEOUT_SECONDS must be a finite positive number.') from exc
+    if not math.isfinite(seconds) or seconds <= 0:
+        raise ValueError('CHEMEX_ZEOPP_TIMEOUT_SECONDS must be a finite positive number.')
+    return seconds
 
 
 def detect_zeopp_binary() -> tuple[Path | None, str]:
@@ -347,6 +363,7 @@ def drain_pipe(
     mode: str | None = None,
     advance: Callable[[str, int], None] | None = None,
     current_progress: Callable[[], int] | None = None,
+    log_file: TextIO | None = None,
 ) -> None:
     if pipe is None:
         return
@@ -355,6 +372,9 @@ def drain_pipe(
             if not line:
                 break
             buffer.append(line)
+            if log_file is not None:
+                log_file.write(line)
+                log_file.flush()
             if mode and advance and current_progress:
                 update_zeopp_progress_from_line(mode, line, advance, current_progress)
     finally:
@@ -470,66 +490,104 @@ def run_workflow(
         raise RuntimeError(zeopp_message)
 
     command, output_path, extended = build_command(zeopp_binary, mode, input_path, params)
+    timeout_seconds = get_zeopp_timeout_seconds()
     stdout_lines: list[str] = []
     stderr_lines: list[str] = []
-    advance('launching', 4)
-
-    with suppress_windows_error_dialogs():
-        process = subprocess.Popen(
-            command,
-            cwd=str(job_dir),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,
-            env=build_zeopp_env(),
-            creationflags=creation_flags_for_zeopp(),
-        )
-
-        import threading
-
-        stdout_thread = threading.Thread(
-            target=drain_pipe,
-            args=(process.stdout, stdout_lines),
-            kwargs={'mode': mode, 'advance': advance, 'current_progress': current_progress},
-            daemon=True,
-        )
-        stderr_thread = threading.Thread(
-            target=drain_pipe,
-            args=(process.stderr, stderr_lines),
-            daemon=True,
-        )
-        stdout_thread.start()
-        stderr_thread.start()
-
-        try:
-            returncode = process.wait(timeout=300)
-        except subprocess.TimeoutExpired as exc:
-            process.kill()
-            process.wait(timeout=10)
-            raise TimeoutError(f'ZEO++ {mode.upper()} timed out after 300 seconds.') from exc
-
-        stdout_thread.join(timeout=2)
-        stderr_thread.join(timeout=2)
-
-    stdout_text = ''.join(stdout_lines)
-    stderr_text = ''.join(stderr_lines)
-    output_exists = output_path.exists() and output_path.stat().st_size > 0
-    if returncode != 0 and not output_exists:
-        raise RuntimeError(f'ZEO++ {mode.upper()} execution failed.')
-
-    advance('parsing_output', 97)
-    output_text = output_path.read_text(encoding='utf-8', errors='replace')
-    parsed = parse_output(mode, output_text, extended)
-    result = {
-        'jobId': job_id,
-        **parsed,
-        'rawOutput': output_text,
-        'stdout': stdout_text,
-        'stderr': stderr_text,
-        'returnCode': returncode,
-        'artifacts': [{'name': output_path.name, 'url': f'./api/artifacts/{job_id}/{output_path.name}'}],
+    stdout_path = job_dir / 'zeopp-stdout.log'
+    stderr_path = job_dir / 'zeopp-stderr.log'
+    metadata_path = job_dir / 'zeopp-run.json'
+    metadata: dict[str, Any] = {
+        'jobId': job_id, 'mode': mode, 'params': params, 'command': command,
+        'timeoutSeconds': timeout_seconds, 'startedAt': time.time(),
+        'status': 'running', 'returnCode': None, 'error': None,
     }
-    if returncode != 0:
-        result['warning'] = f'ZEO++ returned a non-zero exit code on Windows, but the {mode.upper()} output file was written successfully.'
-    return result
+    metadata_path.write_text(json.dumps(metadata, indent=2), encoding='utf-8')
+    started = time.monotonic()
+    process = None
+    try:
+        advance('launching', 4)
+        with (
+            suppress_windows_error_dialogs(),
+            stdout_path.open('w', encoding='utf-8') as stdout_log,
+            stderr_path.open('w', encoding='utf-8') as stderr_log,
+        ):
+            process = subprocess.Popen(
+                command,
+                cwd=str(job_dir),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                bufsize=1,
+                env=build_zeopp_env(),
+                creationflags=creation_flags_for_zeopp(),
+            )
+            stdout_thread = threading.Thread(
+                target=drain_pipe,
+                args=(process.stdout, stdout_lines),
+                kwargs={'mode': mode, 'advance': advance, 'current_progress': current_progress, 'log_file': stdout_log},
+                daemon=True,
+            )
+            stderr_thread = threading.Thread(
+                target=drain_pipe,
+                args=(process.stderr, stderr_lines),
+                kwargs={'log_file': stderr_log},
+                daemon=True,
+            )
+            stdout_thread.start()
+            stderr_thread.start()
+            try:
+                returncode = process.wait(timeout=timeout_seconds)
+            except subprocess.TimeoutExpired as exc:
+                raise TimeoutError(
+                    f'ZEO++ {mode.upper()} timed out after {timeout_seconds:g} seconds. '
+                    'Try fewer samples or contact the administrator.'
+                ) from exc
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.wait()
+                # Reap the engine and drain both pipes before closing its log files.
+                stdout_thread.join()
+                stderr_thread.join()
+
+        stdout_text = ''.join(stdout_lines)
+        stderr_text = ''.join(stderr_lines)
+        output_exists = output_path.exists() and output_path.stat().st_size > 0
+        if not output_exists:
+            if returncode != 0:
+                raise RuntimeError(f'ZEO++ {mode.upper()} execution failed (exit code {returncode}).')
+            raise RuntimeError(f'ZEO++ {mode.upper()} did not produce a non-empty output file.')
+
+        advance('parsing_output', 97)
+        output_text = output_path.read_text(encoding='utf-8', errors='replace')
+        parsed = parse_output(mode, output_text, extended)
+        result = {
+            'jobId': job_id,
+            **parsed,
+            'rawOutput': output_text,
+            'stdout': stdout_text,
+            'stderr': stderr_text,
+            'returnCode': returncode,
+            'artifacts': [
+                {'name': path.name, 'url': f'./api/artifacts/{job_id}/{path.name}'}
+                for path in (output_path, metadata_path, stdout_path, stderr_path)
+            ],
+        }
+        if returncode != 0:
+            result['warning'] = f'ZEO++ returned exit code {returncode}, but the {mode.upper()} output file was written and parsed successfully.'
+            metadata['warning'] = result['warning']
+        metadata['status'] = 'completed'
+        return result
+    except Exception as exc:
+        metadata['status'] = 'timed_out' if isinstance(exc, TimeoutError) else 'failed'
+        metadata['error'] = str(exc)
+        raise
+    finally:
+        metadata.update(
+            returnCode=process.returncode if process is not None else None,
+            finishedAt=time.time(),
+            elapsedSeconds=round(time.monotonic() - started, 3),
+        )
+        metadata_path.write_text(json.dumps(metadata, indent=2), encoding='utf-8')

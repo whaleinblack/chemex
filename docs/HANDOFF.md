@@ -115,6 +115,16 @@ Current job handling:
 - workers run as background threads
 - clients poll `/api/jobs/<job_id>`
 
+ZEO++ execution (updated 2026-10-08):
+
+- `CHEMEX_ZEOPP_TIMEOUT_SECONDS` controls the engine subprocess deadline; the default is `1800` seconds (30 minutes). Values must be finite and positive.
+- The previous fixed 300-second deadline interrupted 100000-sample PSD runs. A TK-COF-6 reproduction took about 465 seconds on the production host; runtime varies with structure, parameters, and load.
+- Each launched job writes `zeopp-run.json`, `zeopp-stdout.log`, and `zeopp-stderr.log` in its artifact directory, including on timeout, engine failure, or output-parsing failure. The JSON records the command, parameters, deadline, timing, exit code, status, and error.
+- Engine output is streamed to disk. Timed-out engines are killed and reaped before logs are finalized.
+- The ZEO++ UI displays the backend job error and a failed result state, without presenting failed work as 100% complete.
+- These files survive service restarts; the in-memory job polling record still does not. Existing failed jobs are not automatically resumed.
+- Changing only Nginx or Gunicorn timeouts does not change the engine deadline. Configure the environment on the ChemEx service and reload it between jobs when overriding the default.
+
 Important caveat:
 
 - jobs and job status are lost if the service restarts
