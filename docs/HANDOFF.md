@@ -312,6 +312,17 @@ Python dependency: Pillow is used to validate uploads (normally installed with e
 
 Research requests are capped at two simultaneous workers and 30 starts/hour per process. Gunicorn multi-process deployments multiply those limits; use a shared limiter/authentication before exposing paid research broadly. Existing job restarts still lose polling records. No inputs are sent to AI in public mode. In AI mode, user-confirmed names/context and uploaded images are sent to OpenAI; public queries go to PubChem/Crossref.
 
-Validation: Python unittest backend.test_research + backend.test_zeopp_execution; TypeScript build and Vite production build. No paid AI end-to-end call has been run without credentials. No production deployment can be completed until SSH access is provided.
+Validation: Python unittest backend.test_research + backend.test_zeopp_execution; TypeScript build and Vite production build. No paid AI end-to-end call has been run without credentials. Production deployment was completed on 2026-10-13 using the supplied codex account key.
 
 Production update: preserve server working-tree edits; back up the app and dist; pull the approved commit; npm ci; npm run build; verify Pillow in venv; restart chemex.service only when existing calculations are idle. Validate /api/health, /api/research/status and a name/CAS search. Do not change shared-host Nginx or other apps. Roll back the prior app/dist and restart ChemEx if health verification fails.
+
+
+### Production delivery receipt: 2026-10-13
+
+- Deployed source commit: 6a546bb7823c564ac453728039cbda148a103bf9 (PR #2).
+- Applied only the runtime/frontend delta onto the existing production working tree; did not reset or discard its uncommitted SESAMI improvements, engine code or styles. Their hashes were checked before and after deployment. The live checkout retains its older Git HEAD and server-local changes.
+- Complete private backup: /srv/chemex/backups/cof-design-before-20261013-2028.tar.gz; gzip integrity verified. Previous dist also retained at /srv/chemex/staging/dist-before-cof-design-20261013.
+- Patch SHA-256: 9bbf374b8e497c5befb16f52b29b2609fce8fba260442d2e6d8e49229660b3f3.
+- Production validation: 11 research tests passed using the production venv, TypeScript/Vite build passed with the preserved live sources, chemex.service active, SESAMI and ZEO++ health ready.
+- New public page title and research tab verified at https://chemex.space/. Current research mode is public-metadata; enhanced/vision are false. AI credentials and paid end-to-end verification remain outstanding.
+- Rollback: reverse the runtime patch only if the source has not changed subsequently; restore previous dist from staging; restart chemex.service. For later/conflicting changes, use the complete backup carefully without overwriting newer user work.
