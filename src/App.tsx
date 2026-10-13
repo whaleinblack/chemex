@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActionIcon,
   Badge,
@@ -116,9 +116,6 @@ export default function App() {
               <Group gap="sm">
                 <Badge radius="xl" size="lg" variant="light" color="ocean" className="ghost-badge">
                   {t.badges.toolbox}
-                </Badge>
-                <Badge radius="xl" size="lg" variant="white" className="ghost-badge">
-                  {t.badges.release}
                 </Badge>
               </Group>
 

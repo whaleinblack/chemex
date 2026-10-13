@@ -327,3 +327,16 @@ When in doubt, prioritize in this order:
 4. only then add a new heavyweight engine
 
 This keeps ChemEx credible as a scientific tool rather than a shallow feature list.
+
+
+## COF experiment-design research (2026-10-13)
+
+- Product label: COF多功能工具箱 / COF multifunctional toolbox. The decorative hardcoded v0.5 label was removed; engine versions remain visible.
+- Research is a separate tab before SESAMI. Confirm every monomer identity before combination search.
+- Exact combination, related backbone and metadata candidates are distinct. Do not claim nobody has reported a combination from an empty search.
+- Evidence fields require a consulted URL and an evidence note; unknown facts stay null. SCXRD, PXRD simulation, Pawley fitting and Rietveld refinement remain separate.
+- Public metadata mode uses PubChem and Crossref without secrets. It cannot establish an exact match, interpret images, or supply full-text synthesis conditions.
+- Optional AI mode uses Responses API web search and structure-image inputs. Configure only server-side; never embed secrets in frontend code.
+
+
+2026-10-13 update: At the owner’s request, the COF Experiment Design tab, research routes and module code were removed. The COF多功能工具箱 name, removal of the decorative version label, and existing SESAMI/ZEO++ workflows are retained. Earlier research sections above are historical delivery records.

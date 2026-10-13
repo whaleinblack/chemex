@@ -292,3 +292,40 @@ Highest-value next tasks:
 - Preserve raw scientific output and warning visibility.
 - Do not remove the current export paths just because the UI becomes more polished.
 - Update roadmap, guideline, and handoff whenever a new engine or domain rule is introduced.
+
+
+## COF Experiment Design delivery (2026-10-13)
+
+New files: `backend/services_research.py`, `backend/routes_research.py`, `src/features/research/ResearchWorkbench.tsx`, and `backend/test_research.py`.
+
+Endpoints:
+- GET /api/research/status
+- POST /api/research/identify: multipart `monomers` JSON (2–4 text objects); optional image0–image3 PNG/JPEG/WebP, ≤5 MB/image and ≤12 megapixels. Images require enhanced mode.
+- POST /api/research/search: JSON with confirmed:true, 2–4 monomers (name, aliases, cas, backbone), notes and locale.
+- Existing GET /api/jobs/<id> polls both research phases. Completed reports persist as identity.json / research.json in the job artifact folder. Job records remain in memory.
+
+Default mode queries public PubChem identity records and Crossref metadata. All papers are explicitly unverified candidates; conditions are null. Monomer identity confirmation, aliases and backbone edits expand retrieval.
+
+Enhanced mode requires OPENAI_API_KEY in the ChemEx service environment (never commit it). CHEMEX_RESEARCH_MODEL is optional; default gpt-5.4, which must support vision, Responses structured outputs and web_search. The service uses required web search, actual source receipts, and store:false. Follow https://developers.openai.com/api/docs/guides/tools-web-search and https://developers.openai.com/api/docs/guides/images-vision. API usage has provider charges. ChatGPT subscription is not server API access.
+
+Python dependency: Pillow is used to validate uploads (normally installed with existing matplotlib); verify it exists in /srv/chemex/venv before enabling image inputs. No new JavaScript dependencies.
+
+Research requests are capped at two simultaneous workers and 30 starts/hour per process. Gunicorn multi-process deployments multiply those limits; use a shared limiter/authentication before exposing paid research broadly. Existing job restarts still lose polling records. No inputs are sent to AI in public mode. In AI mode, user-confirmed names/context and uploaded images are sent to OpenAI; public queries go to PubChem/Crossref.
+
+Validation: Python unittest backend.test_research + backend.test_zeopp_execution; TypeScript build and Vite production build. No paid AI end-to-end call has been run without credentials. Production deployment was completed on 2026-10-13 using the supplied codex account key.
+
+Production update: preserve server working-tree edits; back up the app and dist; pull the approved commit; npm ci; npm run build; verify Pillow in venv; restart chemex.service only when existing calculations are idle. Validate /api/health, /api/research/status and a name/CAS search. Do not change shared-host Nginx or other apps. Roll back the prior app/dist and restart ChemEx if health verification fails.
+
+
+### Production delivery receipt: 2026-10-13
+
+- Deployed source commit: 6a546bb7823c564ac453728039cbda148a103bf9 (PR #2).
+- Applied only the runtime/frontend delta onto the existing production working tree; did not reset or discard its uncommitted SESAMI improvements, engine code or styles. Their hashes were checked before and after deployment. The live checkout retains its older Git HEAD and server-local changes.
+- Complete private backup: /srv/chemex/backups/cof-design-before-20261013-2028.tar.gz; gzip integrity verified. Previous dist also retained at /srv/chemex/staging/dist-before-cof-design-20261013.
+- Patch SHA-256: 9bbf374b8e497c5befb16f52b29b2609fce8fba260442d2e6d8e49229660b3f3.
+- Production validation: 11 research tests passed using the production venv, TypeScript/Vite build passed with the preserved live sources, chemex.service active, SESAMI and ZEO++ health ready.
+- New public page title and research tab verified at https://chemex.space/. Current research mode is public-metadata; enhanced/vision are false. AI credentials and paid end-to-end verification remain outstanding.
+- Rollback: reverse the runtime patch only if the source has not changed subsequently; restore previous dist from staging; restart chemex.service. For later/conflicting changes, use the complete backup carefully without overwriting newer user work.
+
+
+2026-10-13 update: At the owner’s request, the COF Experiment Design tab, research routes and module code were removed. The COF多功能工具箱 name, removal of the decorative version label, and existing SESAMI/ZEO++ workflows are retained. Earlier research sections above are historical delivery records.

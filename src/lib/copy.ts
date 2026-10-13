@@ -1,9 +1,8 @@
-﻿import type { Locale } from './types';
+import type { Locale } from './types';
 
 type Copy = {
   badges: {
     toolbox: string;
-    release: string;
   };
   languageLabel: string;
   heroSubtitle: string;
@@ -47,13 +46,12 @@ type Copy = {
 export const copy: Record<Locale, Copy> = {
   zh: {
     badges: {
-      toolbox: 'COF 多功能计算工具箱',
-      release: 'v0.5',
+      toolbox: 'COF多功能工具箱',
     },
     languageLabel: '语言',
-    heroSubtitle: 'COF多功能计算工具箱',
+    heroSubtitle: 'COF多功能工具箱',
     heroBody:
-      'COF多功能计算工具箱，已接入 SESAMI 与 ZEO++ 两条真实计算工作流，并在统一界面下扩展为多功能分析套件。',
+      'COF多功能工具箱，整合 SESAMI 吸附分析和 ZEO++ 孔隙结构分析。',
     heroFootnote: '支持本地文件上传、任务进度跟踪、结果查看与导出。',
     guide: {
       buttonLabel: '使用说明',
@@ -71,7 +69,7 @@ export const copy: Record<Locale, Copy> = {
         '上传本地等温线或结构文件，按需要填写气体、版本或计算参数。',
         '点击运行后等待进度完成，再在结果区查看指标、图像、线性区或导出原始数据。',
       ],
-      note: '当前说明以线上正式版展示口径为准，实际可用功能以本地已接入的真实计算流程为准。',
+      note: '实际可用功能以已接入的分析流程为准。',
     },
     tabs: {
       sesami: 'SESAMI',
@@ -79,7 +77,7 @@ export const copy: Record<Locale, Copy> = {
     },
     footer: {
       brand: 'ChemEx',
-      description: 'COF多功能计算工具箱 · v0.5',
+      description: 'COF多功能工具箱',
       online: 'Online',
       offline: 'Offline',
       ready: 'Ready',
@@ -100,12 +98,11 @@ export const copy: Record<Locale, Copy> = {
   en: {
     badges: {
       toolbox: 'COF Multi-Toolbox',
-      release: 'v0.5',
     },
     languageLabel: 'Language',
-    heroSubtitle: 'COF multifunctional computational toolbox',
+    heroSubtitle: 'COF multifunctional toolbox',
     heroBody:
-      'A COF multifunctional computation toolbox with live SESAMI and ZEO++ workflows, expanded inside one shared interface as multi-function analysis suites.',
+      'A COF multifunctional toolbox for SESAMI adsorption analysis and ZEO++ pore analysis.',
     heroFootnote: 'Supports local file upload, job progress tracking, result inspection, and export.',
     guide: {
       buttonLabel: 'Usage guide',
@@ -123,7 +120,7 @@ export const copy: Record<Locale, Copy> = {
         'Upload a local isotherm or structure file and set the needed gas, version, or calculation parameters.',
         'Run the job and inspect metrics, plots, linear regions, or exported raw data once the progress completes.',
       ],
-      note: 'The visual guidance follows the formal online presentation, while the actual available actions reflect the local features already wired to real calculations.',
+      note: 'Available actions reflect the integrated analysis workflows.',
     },
     tabs: {
       sesami: 'SESAMI',
@@ -131,7 +128,7 @@ export const copy: Record<Locale, Copy> = {
     },
     footer: {
       brand: 'ChemEx',
-      description: 'COF multifunctional computational toolbox · v0.5',
+      description: 'COF multifunctional toolbox',
       online: 'Online',
       offline: 'Offline',
       ready: 'Ready',

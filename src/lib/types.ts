@@ -1,4 +1,4 @@
-﻿export type Locale = 'zh' | 'en';
+export type Locale = 'zh' | 'en';
 export type ToolKey = 'zeopp' | 'sesami';
 
 export type Health = {
