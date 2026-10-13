@@ -296,3 +296,10 @@ If we only fund one next sprint, the best return is:
 4. persistent job/result storage
 
 That combination would move ChemEx from “working prototype” to “real internal research tool.”
+
+
+## 2026-10-13: COF experiment design
+
+Implemented: renamed toolbox and removed ornamental version; literature module before SESAMI; monomer identity confirmation; public PubChem/Crossref retrieval; optional web/vision research adapter; field-level evidence and report export.
+
+Pending external delivery requirements: production SSH access; an AI service key for image recognition, automatic backbone matching and full-text evidence extraction. Metadata-only retrieval cannot establish novelty.

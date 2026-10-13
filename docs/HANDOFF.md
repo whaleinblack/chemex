@@ -292,3 +292,26 @@ Highest-value next tasks:
 - Preserve raw scientific output and warning visibility.
 - Do not remove the current export paths just because the UI becomes more polished.
 - Update roadmap, guideline, and handoff whenever a new engine or domain rule is introduced.
+
+
+## COF Experiment Design delivery (2026-10-13)
+
+New files: `backend/services_research.py`, `backend/routes_research.py`, `src/features/research/ResearchWorkbench.tsx`, and `backend/test_research.py`.
+
+Endpoints:
+- GET /api/research/status
+- POST /api/research/identify: multipart `monomers` JSON (2–4 text objects); optional image0–image3 PNG/JPEG/WebP, ≤5 MB/image and ≤12 megapixels. Images require enhanced mode.
+- POST /api/research/search: JSON with confirmed:true, 2–4 monomers (name, aliases, cas, backbone), notes and locale.
+- Existing GET /api/jobs/<id> polls both research phases. Completed reports persist as identity.json / research.json in the job artifact folder. Job records remain in memory.
+
+Default mode queries public PubChem identity records and Crossref metadata. All papers are explicitly unverified candidates; conditions are null. Monomer identity confirmation, aliases and backbone edits expand retrieval.
+
+Enhanced mode requires OPENAI_API_KEY in the ChemEx service environment (never commit it). CHEMEX_RESEARCH_MODEL is optional; default gpt-5.4, which must support vision, Responses structured outputs and web_search. The service uses required web search, actual source receipts, and store:false. Follow https://developers.openai.com/api/docs/guides/tools-web-search and https://developers.openai.com/api/docs/guides/images-vision. API usage has provider charges. ChatGPT subscription is not server API access.
+
+Python dependency: Pillow is used to validate uploads (normally installed with existing matplotlib); verify it exists in /srv/chemex/venv before enabling image inputs. No new JavaScript dependencies.
+
+Research requests are capped at two simultaneous workers and 30 starts/hour per process. Gunicorn multi-process deployments multiply those limits; use a shared limiter/authentication before exposing paid research broadly. Existing job restarts still lose polling records. No inputs are sent to AI in public mode. In AI mode, user-confirmed names/context and uploaded images are sent to OpenAI; public queries go to PubChem/Crossref.
+
+Validation: Python unittest backend.test_research + backend.test_zeopp_execution; TypeScript build and Vite production build. No paid AI end-to-end call has been run without credentials. No production deployment can be completed until SSH access is provided.
+
+Production update: preserve server working-tree edits; back up the app and dist; pull the approved commit; npm ci; npm run build; verify Pillow in venv; restart chemex.service only when existing calculations are idle. Validate /api/health, /api/research/status and a name/CAS search. Do not change shared-host Nginx or other apps. Roll back the prior app/dist and restart ChemEx if health verification fails.

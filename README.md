@@ -1,6 +1,6 @@
 # ChemEx
 
-Web app for porous-material computation.
+COF multifunctional toolbox for experiment-design literature research and porous-material analysis.
 
 ## Docs
 
