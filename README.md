@@ -1,6 +1,6 @@
 # ChemEx
 
-COF multifunctional toolbox for experiment-design literature research and porous-material analysis.
+COF multifunctional toolbox for porous-material analysis.
 
 ## Docs
 

@@ -337,3 +337,6 @@ This keeps ChemEx credible as a scientific tool rather than a shallow feature li
 - Evidence fields require a consulted URL and an evidence note; unknown facts stay null. SCXRD, PXRD simulation, Pawley fitting and Rietveld refinement remain separate.
 - Public metadata mode uses PubChem and Crossref without secrets. It cannot establish an exact match, interpret images, or supply full-text synthesis conditions.
 - Optional AI mode uses Responses API web search and structure-image inputs. Configure only server-side; never embed secrets in frontend code.
+
+
+2026-10-13 update: At the owner’s request, the COF Experiment Design tab, research routes and module code were removed. The COF多功能工具箱 name, removal of the decorative version label, and existing SESAMI/ZEO++ workflows are retained. Earlier research sections above are historical delivery records.

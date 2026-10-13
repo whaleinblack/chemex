@@ -1,5 +1,5 @@
 export type Locale = 'zh' | 'en';
-export type ToolKey = 'zeopp' | 'sesami' | 'research';
+export type ToolKey = 'zeopp' | 'sesami';
 
 export type Health = {
   status: string;

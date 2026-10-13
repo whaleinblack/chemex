@@ -326,3 +326,6 @@ Production update: preserve server working-tree edits; back up the app and dist;
 - Production validation: 11 research tests passed using the production venv, TypeScript/Vite build passed with the preserved live sources, chemex.service active, SESAMI and ZEO++ health ready.
 - New public page title and research tab verified at https://chemex.space/. Current research mode is public-metadata; enhanced/vision are false. AI credentials and paid end-to-end verification remain outstanding.
 - Rollback: reverse the runtime patch only if the source has not changed subsequently; restore previous dist from staging; restart chemex.service. For later/conflicting changes, use the complete backup carefully without overwriting newer user work.
+
+
+2026-10-13 update: At the owner’s request, the COF Experiment Design tab, research routes and module code were removed. The COF多功能工具箱 name, removal of the decorative version label, and existing SESAMI/ZEO++ workflows are retained. Earlier research sections above are historical delivery records.

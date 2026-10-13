@@ -15,7 +15,6 @@ import { fetchHealth } from './lib/api';
 import { copy } from './lib/copy';
 import type { Health, Locale, ToolKey } from './lib/types';
 import { SesamiWorkbench } from './features/sesami/SesamiWorkbench';
-import { ResearchWorkbench } from './features/research/ResearchWorkbench';
 import { ZeoppWorkbench } from './features/zeopp/ZeoppWorkbench';
 
 function BrandWordmark() {
@@ -53,7 +52,7 @@ function StatusPill({ label, value, hint, ok }: StatusPillProps) {
 
 export default function App() {
   const [locale, setLocale] = useState<Locale>('zh');
-  const [tool, setTool] = useState<ToolKey>('research');
+  const [tool, setTool] = useState<ToolKey>('sesami');
   const [health, setHealth] = useState<Health | null>(null);
   const [guideOpened, setGuideOpened] = useState(false);
 
@@ -169,7 +168,6 @@ export default function App() {
           <div className="workspace-tabs">
             <Tabs value={tool} onChange={(value) => setTool((value as ToolKey) ?? 'sesami')}>
               <Tabs.List className="glass-tabs-list">
-                <Tabs.Tab value="research" leftSection={<IconAtom2 size={16} />}>{t.tabs.research}</Tabs.Tab>
                 <Tabs.Tab value="sesami" leftSection={<IconSparkles size={16} />}>
                   {t.tabs.sesami}
                 </Tabs.Tab>
@@ -177,10 +175,6 @@ export default function App() {
                   {t.tabs.zeopp}
                 </Tabs.Tab>
               </Tabs.List>
-
-              <Tabs.Panel value="research" pt="xl">
-                <ResearchWorkbench locale={locale} />
-              </Tabs.Panel>
 
               <Tabs.Panel value="sesami" pt="xl">
                 <SesamiWorkbench locale={locale} />

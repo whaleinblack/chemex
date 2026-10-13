@@ -303,3 +303,6 @@ That combination would move ChemEx from “working prototype” to “real inter
 Implemented: renamed toolbox and removed ornamental version; literature module before SESAMI; monomer identity confirmation; public PubChem/Crossref retrieval; optional web/vision research adapter; field-level evidence and report export.
 
 Production basic mode deployed on 2026-10-13. Remaining external requirement: an AI service key for image recognition, automatic backbone matching and full-text evidence extraction. Metadata-only retrieval cannot establish novelty.
+
+
+2026-10-13 update: At the owner’s request, the COF Experiment Design tab, research routes and module code were removed. The COF多功能工具箱 name, removal of the decorative version label, and existing SESAMI/ZEO++ workflows are retained. Earlier research sections above are historical delivery records.

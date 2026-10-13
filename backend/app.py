@@ -10,7 +10,6 @@ from typing import Any
 from flask import Flask, jsonify, request, send_from_directory
 
 from .services_sesami import get_sesami_status, parse_upload as parse_sesami_upload, run_workflow as run_sesami_workflow
-from .routes_research import register_research_routes
 from .services_zeopp import detect_zeopp_binary, run_workflow as run_zeopp_workflow
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -220,9 +219,6 @@ def start_zeopp_job(mode: str):
     )
     worker.start()
     return jsonify(serialize_job(job)), 202
-
-
-register_research_routes(app, create_job, advance_job, finish_job, fail_job)
 
 
 @app.get('/api/health')
