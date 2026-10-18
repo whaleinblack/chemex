@@ -31,6 +31,8 @@
   let activePanel = '', savedSelection, focusMode = false, opening = false, turning = false;
   let turnAt = -Infinity, wheelAt = -Infinity, wheelSum = 0, wheelDirection = 0;
   let searchVersion = 0, saveTimer, toastTimer, generation = 0, lastFocus;
+  let loadAbort, layoutBusy=false, layoutVersion=0, layoutTimer;
+  const typography = new WeakMap();
   const wiredDocuments = new WeakSet();
   const colors = ['#80654e','#527066','#6f6477','#9b7659','#596b7e','#8e625d'];
 
@@ -71,19 +73,61 @@
     try { await operation('readwrite',store => store.put(metadata)); } catch { storageWarning(); }
   }
   function saveSettings() { try { localStorage.setItem('chemex-reader-settings',JSON.stringify(settings)); } catch {} }
-  const status = r => r.progress >= .99 ? 'finished' : r.cfi ? 'reading' : 'unread';
-  const percent = r => Math.round((r.progress || 0) * 100);
-  async function loadEpub(data) {
+  const status = r => (r.finished ?? r.progress===1) ? 'finished' : r.cfi ? 'reading' : 'unread';
+  const percent = r => (r.finished ?? r.progress===1) ? 100 : Math.min(99,Math.round((r.progress || 0) * 100));
+  async function loadEpub(data, signal) {
     const loaded = ePub();
-    let timer;
+    // Some EPUB generators use encoded/nonstandard extensions for XHTML files.
+    // Use the manifest media type rather than guessing from a filename suffix.
+    const originalLoad=loaded.load.bind(loaded);
+    loaded.load=async function(path,type) {
+      const resolved=this.resolve(path);
+      const item=Object.values(this.packaging?.manifest||{}).find(x=>this.resolve(x.href)===resolved);
+      if(item?.['media-type']==='application/xhtml+xml' || item?.type==='application/xhtml+xml') {
+        const raw=await this.archive.getText(resolved);
+        if(raw===undefined)throw new Error('Missing EPUB chapter');
+        let doc=new DOMParser().parseFromString(raw,'application/xhtml+xml');
+        if(doc.querySelector('parsererror'))doc=new DOMParser().parseFromString(raw,'text/html');
+        return doc;
+      }
+      return type && this.archive ? this.archive.request(resolved,type) : originalLoad(path);
+    };
+    loaded.locations.request=loaded.load.bind(loaded);
+    const navigation=loaded.loadNavigation.bind(loaded);
+    loaded.loadNavigation=pack=>navigation(pack).catch(()=>navigation({...pack,navPath:null,ncxPath:null,toc:null}));
+    const replacements=loaded.replacements;
+    loaded.replacements=function() {
+      const resources=this.resources;
+      // Keep holes for missing optional assets; filtering them shifts every later URL.
+      resources.replacements=async()=>{
+        resources.replacementUrls=await Promise.all(resources.urls.map(url=>resources.createUrl(url).catch(()=>null)));
+        return resources.replacementUrls;
+      };
+      return replacements.call(this);
+    };
+    let timer, onAbort;
+    const ready=(async()=>{await loaded.open(data.slice(0),'binary');await loaded.opened;await loaded.ready;return loaded;})();
     try {
       await Promise.race([
-        (async()=>{await loaded.open(data.slice(0),'binary');await loaded.ready;})(),
-        new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('EPUB open timeout')),20000);})
+        ready,
+        new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('EPUB open timeout')),90000);}),
+        new Promise((_,reject)=>{onAbort=()=>reject(new DOMException('Cancelled','AbortError'));if(signal?.aborted)onAbort();else signal?.addEventListener('abort',onAbort,{once:true});})
       ]);
       return loaded;
-    } catch(error) { loaded.destroy(); throw error; }
-    finally { clearTimeout(timer); }
+    } catch(error) { ready.then(()=>loaded.destroy(),()=>loaded.destroy());throw error; }
+    finally {clearTimeout(timer);signal?.removeEventListener('abort',onAbort);}
+  }
+
+  async function packageMetadata(zip) {
+    const parse=source=>{const doc=new DOMParser().parseFromString(source,'application/xml');if(doc.querySelector('parsererror'))throw new Error('Invalid EPUB XML');return doc;};
+    const entry=path=>zip.file(path)||zip.file(decodeURIComponent(path));
+    const container=parse(await entry('META-INF/container.xml').async('string'));
+    const path=container.getElementsByTagNameNS('*','rootfile')[0]?.getAttribute('full-path');
+    if(!path||!entry(path))throw new Error('Missing EPUB package');
+    const doc=parse(await entry(path).async('string'));
+    const value=name=>text(doc.getElementsByTagNameNS('*',name)[0]?.textContent);
+    const layout=[...doc.getElementsByTagNameNS('*','meta')].find(x=>x.getAttribute('property')==='rendition:layout')?.textContent;
+    return {title:value('title'),author:value('creator'),language:value('language'),layout:text(layout)||'reflowable'};
   }
 
   function renderLibrary() {
@@ -104,7 +148,6 @@
     if (!file || !/\.epub$/i.test(file.name)) { toast('请选择 .epub 文件。'); return; }
     if (file.size > 150*1024*1024) { toast('文件超过 150 MiB，请选择较小的 EPUB。'); return; }
     opening = true; toast('正在读取 EPUB…');
-    let candidate;
     try {
       const data = await file.arrayBuffer();
       const digest = await crypto.subtle.digest('SHA-256',data);
@@ -118,17 +161,16 @@
         const enc = await zip.file('META-INF/encryption.xml').async('string');
         if (/EncryptedData/i.test(enc) && !/embedding|obfuscat/i.test(enc)) throw new Error('DRM');
       }
-      candidate = await loadEpub(data);
-      const meta = await candidate.loaded.metadata;
-      const record = {id,data,title:text(meta.title)||file.name.replace(/\.epub$/i,''),author:text(meta.creator)||'未知作者',updated:Date.now(),progress:0,cfi:'',chapter:'',marks:[],notes:[],color:records.length % colors.length};
+      const meta=await packageMetadata(zip);
+      const record = {id,data,...meta,title:meta.title||file.name.replace(/\.epub$/i,''),author:meta.author||'未知作者',updated:Date.now(),progress:0,cfi:'',chapter:'',marks:[],notes:[],color:records.length % colors.length};
       records.push(record);
       try { await operation('readwrite',s=>s.put({id,data}),'files'); } catch { storageWarning(); }
       await persist(record); renderLibrary();
-      candidate.destroy(); candidate = null; opening = false;
+      opening = false;
       await openBook(record);
     } catch(error) {
       console.warn('EPUB import failed',error);
-      candidate?.destroy(); opening = false;
+      opening = false;
       toast(error.message==='DRM' ? '暂不支持 DRM 加密的 EPUB，请选择未加密书籍。' : '无法打开此 EPUB，请确认文件完整且未加密。');
     } finally { $('#file').value = ''; }
   }
@@ -143,34 +185,111 @@
       }
     }
   }
+  async function prepareChapter(doc,section,activeBook) {
+    sanitize(doc);
+    const source=new URL(section.url,'https://epub.invalid/');
+    async function asset(value) {
+      if(!value||/^(?:blob:|data:|#)/i.test(value))return value;
+      const url=new URL(value,source);
+      if(url.origin!==source.origin)return '';
+      const normalize=path=>decodeURIComponent(new URL(path,'https://epub.invalid/').pathname);
+      const index=activeBook.resources.urls.findIndex(path=>normalize(activeBook.resolve(path))===normalize(url.pathname));
+      if(index>=0&&activeBook.resources.replacementUrls[index])return activeBook.resources.replacementUrls[index]+url.hash;
+      try{return await activeBook.archive.createUrl(url.pathname)+url.hash;}catch{return '';}
+    }
+    async function cssText(css,base,seen=new Set()) {
+      const imports=[...css.matchAll(/@import\s+(?:url\(\s*["']?([^"')]+)["']?\s*\)|["']([^"']+)["'])\s*([^;]*);/gi)];
+      for(const match of imports) {
+        const href=match[1]||match[2];const url=new URL(href,new URL(base,'https://epub.invalid/'));
+        let replacement='';
+        if(url.origin===source.origin&&!seen.has(url.pathname)) {
+          try{const raw=await activeBook.archive.getText(url.pathname);if(raw!==undefined){const next=new Set(seen);next.add(url.pathname);replacement=await cssText(raw,url.pathname,next);if(match[3].trim())replacement=`@media ${match[3]}{${replacement}}`;}}catch{}
+        }
+        css=css.replace(match[0],replacement);
+      }
+      for(const match of [...css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/gi)]) {
+        let resolved='';
+        try{const url=new URL(match[1],new URL(base,'https://epub.invalid/'));if(url.protocol==='data:'||url.protocol==='blob:')resolved=url.href;else if(url.origin===source.origin)resolved=await activeBook.archive.createUrl(url.pathname)+url.hash;}catch{}
+        css=css.replace(match[0],`url(${JSON.stringify(resolved)})`);
+      }
+      return css.replace(/@charset\s+["'][^"']+["'];/gi,'');
+    }
+    async function stylesheet(value) {
+      const path=new URL(value,source).pathname;
+      const cache=activeBook.readerStylesheets ||= new Map();
+      if(!cache.has(path))cache.set(path,(async()=>{
+        const raw=await activeBook.archive.getText(path);if(raw===undefined)return '';
+        const css=await cssText(raw,path,new Set([path]));
+        const url=URL.createObjectURL(new Blob([css],{type:'text/css'}));
+        activeBook.archive.urlCache['reader-css:'+path]=url;
+        return url;
+      })());
+      return cache.get(path);
+    }
+    const work=[];
+    for(const element of doc.querySelectorAll('img, image, link[rel="stylesheet"], source, video, audio')) {
+      for(const attribute of ['src','href','xlink:href','poster']){
+        const value=element.getAttribute(attribute);if(!value)continue;
+        const resolve=element.tagName.toLowerCase()==='link'&&attribute==='href'?stylesheet:asset;
+        work.push(resolve(value).then(url=>{if(url)element.setAttribute(attribute,url);else element.removeAttribute(attribute);}));
+      }
+      if(element.hasAttribute('srcset'))element.removeAttribute('srcset');
+      if(element.tagName.toLowerCase()==='img')element.setAttribute('loading','eager');
+    }
+    await Promise.all(work);
+  }
   function flatten(items,depth=0) { return (items||[]).flatMap(x=>[{...x,depth},...flatten(x.subitems,depth+1)]); }
+  function resolveTarget(href,base) {
+    if(!href||href.startsWith('epubcfi('))return href;
+    try{if(book.spine.get(href))return href;}catch{}
+    const normalize=value=>decodeURIComponent(new URL(value,'https://epub.invalid/').pathname);
+    const url=new URL(href,new URL(base||book.resolve(book.packaging.navPath||book.packaging.ncxPath||''),'https://epub.invalid/'));
+    const section=book.spine.spineItems.find(s=>normalize(s.url)===normalize(url.href));
+    return section ? section.href+url.hash : href;
+  }
   async function openBook(record) {
-    if (opening) return;
+    if (opening || !record) return;
     opening = true; const token = ++generation;
+    loadAbort=new AbortController();savedSelection=null;turning=false;layoutBusy=false;
     lastFocus = document.activeElement;
-    current = record; closePanel();
+    current = record;record.marks ||= [];record.notes ||= [];closePanel();
     $('#reader').hidden = false; document.body.style.overflow = 'hidden';
-    $('#book-loading').hidden = false; $('#library').inert = true; $('.site-header').inert = true;
+    $('#book-loading').hidden = false;$('#book-loading').textContent='正在准备书籍和图片…（可点左上角返回取消）';
+    $$('.reader-header button:not(#back)').forEach(button=>button.disabled=true);
+    $('#library').inert = true; $('.site-header').inert = true;
     $('#book-title').textContent = record.title; $('#book-author').textContent = record.author;
     $('#back').focus();
     try {
-      rendition?.destroy(); book?.destroy(); $('#viewer').replaceChildren();
+      rendition?.destroy(); book?.destroy(); rendition=null;book=null;$('#viewer').replaceChildren();
       const data=record.data || (await operation('readonly',s=>s.get(record.id),'files'))?.data;
       if(!data)throw new Error('Book payload unavailable');
-      book = await loadEpub(data);
-      book.spine.hooks.content.register(sanitize);
+      const loaded=await loadEpub(data,loadAbort.signal);
+      if(token!==generation){loaded.destroy();return;}
+      book=loaded;
+      current.layout=book.packaging.metadata.layout||record.layout||'reflowable';
+      $('#reader').classList.toggle('image-book',current.layout==='pre-paginated');
+      book.spine.hooks.content.register((doc,section)=>prepareChapter(doc,section,loaded));
       toc = flatten((await book.loaded.navigation).toc);
-      rendition = book.renderTo('viewer',{width:'100%',height:'100%',flow:settings.flow,spread:'none',allowScriptedContent:false,allowPopups:false});
+      toc=toc.map(item=>({...item,href:resolveTarget(item.href)}));
+      if(!toc.length)toc=book.spine.spineItems.map((s,i)=>({href:s.href,label:`第 ${i+1} 章`,depth:0}));
+      rendition = book.renderTo('viewer',{width:'100%',height:'100%',flow:current.layout==='pre-paginated'?'paginated':settings.flow,spread:'none',allowScriptedContent:false,allowPopups:false});
       rendition.hooks.content.register(contents => {
+        applyContentStyle(contents);
         const doc = contents.document;
         if (!wiredDocuments.has(doc)) {
           wiredDocuments.add(doc);
           doc.addEventListener('wheel',onWheel,{passive:false,capture:true});
           doc.addEventListener('keydown',onKey);
+          doc.addEventListener('click',event=>{
+            const link=event.target.closest?.('a[href]');const href=link?.getAttribute('href');
+            if(!href||/^[a-z]+:/i.test(href))return;
+            event.preventDefault();event.stopImmediatePropagation();
+            navigate(resolveTarget(href,book.spine.get(contents.sectionIndex)?.url));
+          },true);
           doc.addEventListener('pointerdown',()=>{$('#selection-tools').hidden=true;});
           let touch;
           doc.addEventListener('touchstart',e=>{if(e.touches.length===1)touch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
-          doc.addEventListener('touchend',e=>{if(!touch||!e.changedTouches.length)return;const dx=e.changedTouches[0].clientX-touch.x,dy=e.changedTouches[0].clientY-touch.y;touch=null;if(settings.flow==='paginated'&&Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5)turn(dx<0?1:-1);},{passive:true});
+          doc.addEventListener('touchend',e=>{if(!touch||!e.changedTouches.length)return;const dx=e.changedTouches[0].clientX-touch.x,dy=e.changedTouches[0].clientY-touch.y;touch=null;if(effectiveFlow()==='paginated'&&Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5)turn(dx<0?1:-1);},{passive:true});
         }
       });
       rendition.on('selected',(cfi,contents)=>{
@@ -181,44 +300,60 @@
       });
       rendition.on('relocated',location=>{ if(token===generation)relocated(location); });
       applyTheme();
-      await rendition.display(record.cfi || undefined).catch(()=>rendition.display());
+      try{await safeDisplay(record.cfi || undefined);}catch(error){if(!record.cfi)throw error;await safeDisplay();}
       for (const note of record.notes) addAnnotation(note);
       if(token!==generation)return;
       $('#book-loading').hidden=true; opening=false;
+      $$('.reader-header button:not(#back)').forEach(button=>button.disabled=false);
       updateModeButtons();
       // Generating true character locations supports progress across chapters and reloads.
       const activeBook = book;
+      if(record.locations){try{activeBook.locations.load(record.locations);}catch{delete record.locations;}}
+      if(activeBook.locations.length()){relocated(rendition.currentLocation());$('#progress').disabled=false;return;}
+      $('#progress').disabled=false;
+      // Large collections and picture books can navigate immediately by chapter;
+      // do not parse thousands of chapters just to enable the progress slider.
+      if(current.layout==='pre-paginated'||activeBook.spine.spineItems.length>100)return;
       activeBook.locations.generate(300).then(()=>{
         if(token!==generation)return;
-        $('#progress').disabled=false;
+        record.locations=activeBook.locations.save();persist(record);
         const loc=rendition.currentLocation(); if(loc?.start)relocated(loc);
       }).catch(()=>{if(token===generation)toast('已打开书籍；此 EPUB 的进度定位暂不可用。');});
     } catch(error) {
+      if(token!==generation || error.name==='AbortError')return;
       console.warn('EPUB rendering failed',error); opening=false;
-      closeReader(); toast('书籍渲染失败，请尝试其他未加密 EPUB。');
+      closeReader(); toast(error.message==='EPUB open timeout'?'书籍载入超时。可重试打开，或检查 EPUB 中的资源是否完整。':'书籍渲染失败。请检查 EPUB 中的章节和图片资源是否完整。');
     }
   }
   function relocated(loc) {
-    if (!current || !loc?.start) return;
+    if (!current || !loc?.start || layoutBusy) return;
     const href = loc.start.href?.split('#')[0];
     const chapter = toc.find(x=>x.href.split('#')[0]===href);
     current.cfi=loc.start.cfi; current.chapter=text(chapter?.label)||`第 ${(loc.start.index||0)+1} 章`;
     if (book.locations.length()) current.progress=book.locations.percentageFromCfi(loc.start.cfi)||0;
+    else current.progress=((loc.start.index||0)+Math.max(0,(loc.start.displayed?.page||1)-1)/Math.max(1,loc.start.displayed?.total||1))/Math.max(1,book.spine.spineItems.length);
+    current.finished=!!loc.atEnd;
     if(loc.atEnd)current.progress=1;
+    current.progress=Math.max(0,Math.min(loc.atEnd?1:.9999,current.progress||0));
     current.updated=Date.now();
     $('#chapter-label').textContent=current.chapter;
     $('#percentage').textContent=`${percent(current)}%`;
+    $('#percentage').title=book.locations.length()?'按正文位置计算':'按章节估算进度';
     $('#progress').value=Math.round((current.progress||0)*1000);
-    $('#previous').disabled=!!loc.atStart; $('#next').disabled=!!loc.atEnd;
-    const marked=current.marks.some(m=>m.cfi===current.cfi);
+    const viewport=$('#viewer .epub-container');
+    // Fractional column widths can make the engine round page two down to page
+    // one. A nonzero rendered offset must still allow returning to the first page.
+    const offset=viewport?Math.max(Math.abs(viewport.scrollLeft),Math.abs(viewport.scrollTop)):0;
+    $('#previous').disabled=!!loc.atStart&&offset<2; $('#next').disabled=!!loc.atEnd;
+    const marked=current.marks.some(m=>bookmarkOnPage(m.cfi,loc));
     $('#bookmark').setAttribute('aria-pressed',String(marked));
     $('#bookmark').setAttribute('aria-label',marked?'移除书签':'添加书签');
     $('#selection-tools').hidden=true;
     clearTimeout(saveTimer); const record=current; saveTimer=setTimeout(()=>persist(record),400);
   }
   function closeReader() {
-    if (opening) return;
     ++generation; ++searchVersion; clearTimeout(saveTimer);
+    loadAbort?.abort();opening=false;layoutBusy=false;++layoutVersion;clearTimeout(layoutTimer);turning=false;savedSelection=null;
     persist();
     rendition?.destroy(); book?.destroy(); rendition=null;book=null;
     $('#reader').hidden=true; $('#viewer').replaceChildren();
@@ -228,14 +363,14 @@
     lastFocus?.focus();
   }
   async function turn(direction) {
-    if(!rendition || opening || turning) return;
+    if(!rendition || opening || turning || layoutBusy) return;
     turning=true;
     try { await (direction>0 ? rendition.next() : rendition.prev()); }
     catch { toast('无法翻页，请尝试从目录打开章节。'); }
     finally { turning=false; }
   }
   function onWheel(e) {
-    if(!rendition || opening || activePanel || !settings.wheel || settings.flow!=='paginated' || $('#note-dialog').open) return;
+    if(!rendition || opening || activePanel || !settings.wheel || effectiveFlow()!=='paginated' || $('#note-dialog').open) return;
     if(e.ctrlKey||e.metaKey||e.altKey||e.shiftKey||!e.deltaY||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
     if(e.target?.closest?.('input,textarea,button,a,select,[contenteditable="true"]'))return;
     if(e.cancelable)e.preventDefault();
@@ -249,7 +384,7 @@
   }
   function onKey(e) {
     if($('#reader').hidden || e.ctrlKey || e.metaKey || e.altKey || $('#note-dialog').open) return;
-    if(e.target?.closest?.('input,textarea,select,[contenteditable="true"]')) return;
+    if(e.target?.closest?.('input,textarea,select,button,a,[contenteditable="true"]') && e.key!=='Escape') return;
     if(e.key==='Escape'){if(activePanel)closePanel();else if(focusMode)setFocus(false);else closeReader();return;}
     if(activePanel)return;
     if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();turn(e.shiftKey?-1:1);}
@@ -257,30 +392,72 @@
   }
   document.addEventListener('keydown',onKey);
   $('#viewer').addEventListener('wheel',onWheel,{passive:false});
+  const effectiveFlow=()=>current?.layout==='pre-paginated'?'paginated':settings.flow;
+  function applyContentStyle(contents) {
+    if(current?.layout==='pre-paginated')return;
+    const doc=contents.document,win=contents.window;
+    let baseline=typography.get(doc);
+    if(!baseline) {
+      const elements=[doc.body,...doc.body.querySelectorAll('*')].filter(el=>!el.closest('svg,math,rt,rp,script,style') && (el===doc.body||[...el.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())));
+      const paragraphs=[...doc.querySelectorAll('p,li')].filter(el=>text(el.textContent).length>40).slice(0,40);
+      const sizes=paragraphs.map(el=>parseFloat(win.getComputedStyle(el).fontSize)).filter(x=>x>0).sort((a,b)=>a-b);
+      const base=sizes[Math.floor(sizes.length/2)]||parseFloat(win.getComputedStyle(doc.body).fontSize)||16;
+      baseline={base,elements:elements.map(el=>[el,parseFloat(win.getComputedStyle(el).fontSize)||base])};
+      typography.set(doc,baseline);
+    }
+    // Absolute sizes from the original computed style avoid cumulative scaling and
+    // override publisher classes/inline px sizes while preserving heading ratios.
+    for(const [el,size] of baseline.elements) {
+      el.style.setProperty('font-size',`${Math.round(size/baseline.base*settings.font*100)/100}px`,'important');
+      if(!/^H[1-6]$/.test(el.tagName))el.style.setProperty('line-height',String(settings.line),'important');
+    }
+    const palettes={paper:['#fcfbf8','#282720'],sepia:['#f2e8d5','#4d402d'],dark:['#222321','#dddcd5']};
+    const [bg,fg]=palettes[settings.theme];
+    contents.addStylesheetCss(`html,body{background:${bg}!important;color:${fg}!important} body p,body li,body blockquote,body td{line-height:${settings.line}!important} img,svg{max-width:100%!important;object-fit:contain} ${settings.theme==='dark'?'body *:not(img):not(svg):not(svg *){color:inherit!important;background-color:transparent!important}':''}`,'chemex-reader-style');
+  }
   function applyTheme() {
     document.documentElement.dataset.theme=settings.theme;
-    if(rendition) {
-      const palettes={paper:['#fcfbf8','#282720'],sepia:['#f2e8d5','#4d402d'],dark:['#222321','#dddcd5']};
-      const [bg,fg]=palettes[settings.theme];
-      rendition.themes.default({
-        html:{background:`${bg} !important`,color:`${fg} !important`},
-        body:{background:`${bg} !important`,color:`${fg} !important`,'font-family':'Georgia, "Noto Serif SC", "Songti SC", SimSun, serif !important','font-size':`${settings.font}px !important`,'line-height':`${settings.line} !important`,padding:'24px 26px !important'},
-        p:{'line-height':`${settings.line} !important`,'margin-bottom':'1.1em !important'},
-        h1:{'font-size':'1.85em !important','line-height':'1.5 !important','margin-bottom':'1.2em !important'},
-        h2:{'font-size':'1.5em !important','line-height':'1.5 !important'},
-        img:{'max-width':'100% !important','object-fit':'contain'},a:{color:`${fg} !important`}
-      });
-      rendition.themes.fontSize(`${settings.font}px`);
-    }
+    rendition?.getContents().forEach(applyContentStyle);
     saveSettings();
   }
-  function updateModeButtons() {
-    for(const [id,flow] of [['page-mode','paginated'],['scroll-mode','scrolled-doc']]) {
-      $(`#${id}`).classList.toggle('active',settings.flow===flow); $(`#${id}`).setAttribute('aria-pressed',String(settings.flow===flow));
-    }
-    $('#wheel-hint').textContent=settings.flow==='paginated'?(settings.wheel?'↕ 滚轮翻页':'滚轮翻页已关闭'):'↕ 章节内连续滚动';
+  async function safeDisplay(target) {
+    const engine=rendition;
+    if(!engine)return;
+    if(target)target=resolveTarget(target);
+    if(target&&!book.spine.get(target))throw new Error('Location unavailable');
+    let timer;
+    try {
+      await Promise.race([engine.display(target),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Chapter display timeout')),30000);})]);
+    }finally{clearTimeout(timer);}
   }
-  async function changeFlow(flow) { settings.flow=flow;saveSettings();updateModeButtons();if(rendition){rendition.flow(flow);await rendition.display(current.cfi);} }
+  async function navigate(target) {
+    try{await safeDisplay(target);}catch{toast('这个位置暂时无法打开，请从目录选择其他章节。');}
+  }
+  function refreshLayout() {
+    const anchor=current?.cfi,engine=rendition,token=generation;
+    applyTheme();
+    if(!engine||current?.layout==='pre-paginated')return;
+    const version=++layoutVersion;layoutBusy=true;clearTimeout(layoutTimer);
+    layoutTimer=setTimeout(async()=>{
+      try { await safeDisplay(anchor); }
+      catch { toast('排版更新失败，请从目录重新选择当前章节。'); }
+      finally{if(version===layoutVersion&&token===generation){layoutBusy=false;relocated(engine.currentLocation());}}
+    },100);
+  }
+  function bookmarkOnPage(cfi,loc) {
+    if(!loc?.start)return false;
+    if(cfi===loc.start.cfi)return true;
+    try{const compare=new ePub.CFI();return compare.compare(cfi,loc.start.cfi)>=0&&compare.compare(cfi,loc.end.cfi)<=0;}catch{return false;}
+  }
+  function updateModeButtons() {
+    const fixed=current?.layout==='pre-paginated';
+    for(const [id,flow] of [['page-mode','paginated'],['scroll-mode','scrolled-doc']]) {
+      $(`#${id}`).classList.toggle('active',effectiveFlow()===flow); $(`#${id}`).setAttribute('aria-pressed',String(effectiveFlow()===flow));
+    }
+    $('#scroll-mode').disabled=fixed;
+    $('#wheel-hint').textContent=fixed?'固定版式 · 保留原始页面':effectiveFlow()==='paginated'?(settings.wheel?'↕ 滚轮翻页':'滚轮翻页已关闭'):'↕ 章节内连续滚动';
+  }
+  async function changeFlow(flow) {if(current?.layout==='pre-paginated')return;const anchor=current?.cfi;settings.flow=flow;saveSettings();updateModeButtons();if(rendition){rendition.flow(flow);await navigate(anchor);} }
   function setFocus(value) {focusMode=value;$('#reader').classList.toggle('focus-mode',value);$('#exit-focus').hidden=!value;$('#focus').setAttribute('aria-label',value?'退出专注模式':'进入专注模式');if(rendition)requestAnimationFrame(()=>rendition.resize());}
   function closePanel() { activePanel=''; ++searchVersion;$('#panel').hidden=true;$$('.reader-header [data-panel]').forEach(b=>b.classList.remove('active')); }
   function openPanel(name) {
@@ -301,8 +478,12 @@
     if(name==='notes')renderNotes();
   }
   function renderSettings() {
-    $('#panel-body').innerHTML=`<div class="setting"><label>字号</label><div class="font-control"><button data-font="-1" aria-label="减小字号">A−</button><output id="font-value">${settings.font} px</output><button data-font="1" aria-label="增大字号">A＋</button></div></div><div class="setting"><label for="line-spacing">行距 <output id="line-value">${settings.line.toFixed(1)}</output></label><input id="line-spacing" type="range" min="1.3" max="2.5" step="0.1" value="${settings.line}"></div><div class="setting"><label>纸张主题</label><div class="theme-options">${[['paper','纸白'],['sepia','暖色'],['dark','深夜']].map(([k,v])=>`<button data-theme="${k}" aria-pressed="${settings.theme===k}">${v}</button>`).join('')}</div></div><div class="setting"><label class="setting-toggle" for="wheel-enabled">鼠标滚轮翻页<input id="wheel-enabled" type="checkbox" ${settings.wheel?'checked':''}></label><p class="panel-description">分页模式下，向下翻下一页，向上翻上一页。保留 Ctrl + 滚轮缩放。</p></div><div class="setting"><label>键盘操作</label><p class="panel-description">← / →：翻页<br>Page Up / Page Down：翻页<br>空格 / Shift + 空格：下一页 / 上一页<br>Esc：关闭面板或退出专注模式</p></div>`;
-    $('#line-spacing').addEventListener('input',e=>{settings.line=Number(e.target.value);$('#line-value').textContent=settings.line.toFixed(1);applyTheme();});
+    $('#panel-body').innerHTML=`<div class="setting"><label>字号（文字大小）</label><div class="font-control"><button data-font="-1" aria-label="减小字号">A−</button><output id="font-value">${settings.font} px</output><button data-font="1" aria-label="增大字号">A＋</button></div></div><div class="setting"><label for="line-spacing">行距（倍数） <output id="line-value">${settings.line.toFixed(1)}</output></label><input id="line-spacing" type="range" min="1.3" max="2.5" step="0.1" value="${settings.line}"></div><div class="setting"><label>纸张主题</label><div class="theme-options">${[['paper','纸白'],['sepia','暖色'],['dark','深夜']].map(([k,v])=>`<button data-theme="${k}" aria-pressed="${settings.theme===k}">${v}</button>`).join('')}</div></div><div class="setting"><label class="setting-toggle" for="wheel-enabled">鼠标滚轮翻页<input id="wheel-enabled" type="checkbox" ${settings.wheel?'checked':''}></label><p class="panel-description">分页模式下，向下翻下一页，向上翻上一页。保留 Ctrl + 滚轮缩放。</p></div><div class="setting"><label>键盘操作</label><p class="panel-description">← / →：翻页<br>Page Up / Page Down：翻页<br>空格 / Shift + 空格：下一页 / 上一页<br>Esc：关闭面板或退出专注模式</p></div>`;
+    if(current?.layout==='pre-paginated'){
+      $('#panel-body').insertAdjacentHTML('afterbegin','<p class="panel-description">这是固定版式／图片书。保留原图和页面尺寸，字号、行距不适用于图片中的文字。</p>');
+      $$('#panel-body [data-font],#line-spacing').forEach(el=>el.disabled=true);
+    }
+    $('#line-spacing').addEventListener('input',e=>{settings.line=Number(e.target.value);$('#line-value').textContent=settings.line.toFixed(1);refreshLayout();});
     $('#wheel-enabled').addEventListener('change',e=>{settings.wheel=e.target.checked;saveSettings();updateModeButtons();});
   }
   async function searchBook(e) {
@@ -324,7 +505,7 @@
   }
   function toggleBookmark() {
     if(!current?.cfi)return;
-    const i=current.marks.findIndex(m=>m.cfi===current.cfi);
+    const i=current.marks.findIndex(m=>bookmarkOnPage(m.cfi,rendition.currentLocation()));
     if(i>=0){current.marks.splice(i,1);toast('已移除书签');}else{current.marks.push({id:crypto.randomUUID(),cfi:current.cfi,label:current.chapter,progress:current.progress,date:Date.now()});toast('已添加书签');}
     persist(); relocated(rendition.currentLocation()); if(activePanel==='notes')renderNotes();
   }
@@ -358,9 +539,9 @@
     }
     if(target.dataset.filter){filter=target.dataset.filter;renderLibrary();return;}
     if(target.dataset.panel){openPanel(target.dataset.panel);return;}
-    if(target.dataset.chapter!==undefined){const href=toc[Number(target.dataset.chapter)]?.href;if(href){closePanel();await rendition.display(href);}return;}
-    if(target.dataset.location){const cfi=target.dataset.location;closePanel();await rendition.display(cfi);return;}
-    if(target.dataset.font){const cfi=current.cfi;settings.font=Math.max(14,Math.min(36,settings.font+Number(target.dataset.font)));applyTheme();$('#font-value').textContent=`${settings.font} px`;await rendition.display(cfi);return;}
+    if(target.dataset.chapter!==undefined){const href=toc[Number(target.dataset.chapter)]?.href;if(href){closePanel();await navigate(href);}return;}
+    if(target.dataset.location){const cfi=target.dataset.location;closePanel();await navigate(cfi);return;}
+    if(target.dataset.font){settings.font=Math.max(14,Math.min(36,settings.font+Number(target.dataset.font)));$('#font-value').textContent=`${settings.font} px`;refreshLayout();return;}
     if(target.dataset.theme){settings.theme=target.dataset.theme;applyTheme();renderSettings();return;}
     if(target.dataset.removeMark){current.marks=current.marks.filter(m=>m.id!==target.dataset.removeMark);persist();renderNotes();relocated(rendition.currentLocation());return;}
     if(target.dataset.removeNote){const note=current.notes.find(n=>n.id===target.dataset.removeNote);if(note)rendition.annotations.remove(note.cfi,'highlight');current.notes=current.notes.filter(n=>n.id!==target.dataset.removeNote);persist();renderNotes();return;}
@@ -376,7 +557,7 @@
   $('#focus').addEventListener('click',()=>{closePanel();setFocus(!focusMode);});$('#exit-focus').addEventListener('click',()=>setFocus(false));
   $('#close-panel').addEventListener('click',closePanel);
   $('#page-mode').addEventListener('click',()=>changeFlow('paginated'));$('#scroll-mode').addEventListener('click',()=>changeFlow('scrolled-doc'));
-  $('#progress').addEventListener('change',async e=>{if(!book?.locations.length())return;await rendition.display(book.locations.cfiFromPercentage(Math.min(.999,Number(e.target.value)/1000)));});
+  $('#progress').addEventListener('change',async e=>{if(!book)return;const fraction=Math.min(.999,Number(e.target.value)/1000);await navigate(book.locations.length()?book.locations.cfiFromPercentage(fraction):book.spine.spineItems[Math.floor(fraction*book.spine.spineItems.length)]?.href);});
   $('#site-theme').addEventListener('click',()=>{settings.theme=settings.theme==='dark'?'paper':'dark';applyTheme();});
   $('#highlight').addEventListener('click',()=>saveSelection());$('#add-note').addEventListener('click',noteDialog);
   $('#note-dialog').addEventListener('close',()=>{if($('#note-dialog').returnValue==='save')saveSelection($('#note-text').value.trim());});

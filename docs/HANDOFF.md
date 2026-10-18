@@ -297,3 +297,5 @@ Highest-value next tasks:
 ## EPUB reader (2026-10-18)
 
 Added the independent /epubreader/ tool with mouse-wheel page navigation, local books, search, bookmarks and notes. Source: public/epubreader/. See [EPUB Reader](EPUB_READER.md) for the release layout, rollback and verification steps. Production serves the reader from a separate Nginx alias to preserve existing server changes.
+
+Follow-up compatibility repair: real-book QA now covers publisher font overrides, nested navigation/CSS, encoded chapter paths, Japanese vertical writing, large collections and fixed-layout picture books. The reader waits for resource readiness, preserves page position during typography changes and supports cancellation during loading. See the compatibility section of EPUB_READER.md and the original regression-fixture generator.

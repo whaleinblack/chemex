@@ -16,7 +16,19 @@ The independent reader lives at `https://chemex.space/epubreader/`. It recreates
 - Paginated and chapter-scroll modes, table of contents, whole-book text search (first 100 matches), reading progress, bookmarks, highlights, notes, Markdown note export, font/line spacing, three paper themes, and focus mode.
 - In page mode, downward wheel events go forward and upward wheel events go backward. Events inside EPUB iframes are handled too. A 45-pixel accumulation threshold and 450-ms minimum interval reduce trackpad over-triggering. Ctrl/Meta/Alt/Shift wheel gestures, tools panels and chapter-scroll mode retain native behavior.
 - Keyboard arrows / Page Up / Page Down / Space and horizontal touch swipes also navigate.
-- DRM is unsupported. EPUB scripted content is disabled; active elements, event handlers, remote resource references and script URLs are removed before rendering. A page CSP blocks external network resources. Reflowable books are the primary target; complex fixed-layout books may differ from publisher formatting.
+- DRM is unsupported. EPUB scripted content is disabled; active elements, event handlers, remote resource references and script URLs are removed before rendering. A page CSP blocks external network resources. Fixed-layout books preserve their viewport and page geometry; font/line-spacing controls are disabled for those pages.
+
+## Compatibility and typography fixes
+
+- Wait for `book.opened` (resource preparation), not only `book.ready` (package parsing). Metadata import no longer opens and immediately destroys a second renderer while resource promises are still pending.
+- Normalize navigation and internal link paths against their own document location. Resolve archived chapter media types from the manifest, including percent-encoded and nonstandard filename extensions. Fall back to an empty navigation model when optional navigation is missing.
+- Resolve chapter images and styles from the archive before rendering. Expand nested CSS imports and rebase their asset URLs, retaining Japanese vertical writing and embedded illustrations. Missing optional resources keep their URL-array positions instead of shifting later assets.
+- Typography scales original computed text sizes to the selected paragraph size. Publisher inline/class font sizes are overridden while heading proportions and ruby annotations retain their hierarchy. Font size and line-spacing ratio have independent controls. Reapplying a theme replaces a single stylesheet instead of appending unbounded CSS rules.
+- Reflow preserves a captured reading position and ignores transient location events. Bookmarks are recognized anywhere within the current visible page after a font change.
+- Cache generated character locations. Collections over 100 spine items and fixed-layout books use immediate chapter-based navigation rather than loading every chapter before enabling progress. Estimated progress has a tooltip and does not report completion until the actual last page.
+- Loading can be cancelled with the back button; stale selection state is cleared when changing books. Keyboard activation of buttons is no longer intercepted as a page turn.
+
+Regression fixtures can be generated with `python scripts/make-epubreader-fixtures.py <output-directory>`. They contain original test text/artwork and cover nested navigation/CSS, inline fixed font sizes, encoded chapter names and fixed-layout images. Real-book browser QA also covers Chinese/English prose, Japanese vertical text with illustrations, a collection with over 1,000 chapters, and an illustrated fixed-layout EPUB. User books are not included in the repository or deployment.
 
 ## Production deployment
 
