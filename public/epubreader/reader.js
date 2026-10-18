@@ -473,6 +473,7 @@
   function openPanel(name) {
     if(activePanel===name){closePanel();return;}
     activePanel=name;++searchVersion;$('#selection-tools').hidden=true;
+    $('#panel').dataset.side=name==='settings'?'right':'left';
     $('#panel').hidden=false;
     $$('.reader-header [data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));
     $('#panel-title').textContent={contents:'目录',search:'搜索书内文字',settings:'阅读设置',notes:'书签与笔记'}[name];

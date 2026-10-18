@@ -12,3 +12,6 @@
 .reader.image-book .viewer{width:calc(100% - 110px);padding:0}
 .setting label{gap:12px}.setting>label output{flex-shrink:0}.font-control button{min-height:38px}
 @media(max-width:560px){.reader.image-book .viewer{width:calc(100% - 46px)}}
+
+/* Reading settings open beside the toolbar control. */
+.panel[data-side=right]{left:auto;right:0;border-right:0;border-left:1px solid var(--line);box-shadow:-12px 0 32px #332b2210}
