@@ -56,7 +56,7 @@ def main():
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with archive.extractfile(member) as source, target.open('wb') as destination:
                     shutil.copyfileobj(source, destination)
-        for required in ['index.html', 'reader.js', 'reader.css', 'vendor/epub.min.js', 'vendor/jszip.min.js']:
+        for required in ['index.html', 'reader-preferences.js', 'reader.js', 'reader.css', 'vendor/epub.min.js', 'vendor/jszip.min.js']:
             if not (release / required).is_file():
                 raise RuntimeError('Incomplete reader release: ' + required)
     for path in [release, *release.rglob('*')]:

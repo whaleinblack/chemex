@@ -299,3 +299,5 @@ Highest-value next tasks:
 Added the independent /epubreader/ tool with mouse-wheel page navigation, local books, search, bookmarks and notes. Source: public/epubreader/. See [EPUB Reader](EPUB_READER.md) for the release layout, rollback and verification steps. Production serves the reader from a separate Nginx alias to preserve existing server changes.
 
 Follow-up compatibility repair: real-book QA now covers publisher font overrides, nested navigation/CSS, encoded chapter paths, Japanese vertical writing, large collections and fixed-layout picture books. The reader waits for resource readiness, preserves page position during typography changes and supports cancellation during loading. See the compatibility section of EPUB_READER.md and the original regression-fixture generator.
+
+Reading preferences are now stored per book (IndexedDB v3) and ordinary body typography uses shared absolute metrics. Existing books receive independent snapshots of the last legacy global settings once; new imports use defaults. See EPUB_READER.md and run the preference regression tests before publishing changes to settings or typography.
