@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ChemEx EPUB Reader：本地电子书书架、鼠标滚轮翻页、目录搜索和阅读笔记。">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self'; style-src 'self' 'unsafe-inline' blob:; img-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'">
+  <title>EPUB Reader · ChemEx</title>
+  <link rel="stylesheet" href="./reader.css">
+  <script src="./vendor/jszip.min.js" defer></script>
+  <script src="./vendor/epub.min.js" defer></script>
+  <script src="./reader.js" defer></script>
+</head>
+<body>
+  <header class="site-header"><a class="brand" href="./"><span class="brand-mark">▤</span> epubreader<span class="byline">by ChemEx</span></a><nav><a href="../">ChemEx 工具箱 ↗</a><button id="site-theme" class="icon" aria-label="切换明暗主题"></button></nav></header>
+  <main id="library" class="library">
+    <section class="library-heading"><div><p class="eyebrow">YOUR PERSONAL LIBRARY</p><h1>我的书架<span class="heading-dot">.</span></h1><p class="subtle">留一点时间，读一本好书。</p></div><button class="primary" data-upload><span>＋</span> 打开 EPUB</button></section>
+    <section id="continue" class="continue-card" hidden></section>
+    <section id="empty" class="drop-zone"><span class="upload-symbol">↥</span><h2>把 EPUB 拖到这里</h2><p>打开一本书，让阅读慢下来。</p><div><button class="primary" data-upload>选择 EPUB 文件</button><button id="example" class="secondary">试读示例</button></div><small>未加密的 EPUB · 最大 150 MiB · 文件保存在此浏览器</small></section>
+    <section class="shelf-toolbar"><div class="filters" role="group" aria-label="筛选书籍"><button class="active" data-filter="all">全部 <span>0</span></button><button data-filter="reading">在读 <span>0</span></button><button data-filter="unread">未读 <span>0</span></button><button data-filter="finished">已读 <span>0</span></button></div><div class="shelf-tools"><label class="search-input"><span>⌕</span><input id="library-query" type="search" placeholder="搜索书名或作者" aria-label="搜索书名或作者"></label><button id="manage" class="secondary">管理</button></div></section>
+    <section id="shelf" class="shelf" aria-label="书架"></section><p id="no-matches" class="subtle" hidden>没有找到符合条件的书籍。</p>
+    <p class="privacy-line"><span>◈</span> 书籍、进度和笔记仅保存在当前浏览器，不会上传。<button id="more-example" class="text-button">打开示例书</button></p>
+    <section class="intro"><p class="eyebrow">A QUIET PLACE TO READ</p><h2>阅读，就在此刻。</h2><p>无需安装插件。打开 EPUB，选一种舒服的排版，回到文字本身。</p><div class="features"><article><span>↕</span><h3>轻轻一滚，翻过一页</h3><p>鼠标向下滚动翻下一页，向上滚动翻上一页；也支持方向键和翻页按钮。</p></article><article><span>☷</span><h3>随时回到想读的地方</h3><p>目录、全文搜索、书签与笔记，让每一次阅读都接得上。</p></article><article><span>Aa</span><h3>找到你的阅读节奏</h3><p>调节字号、行距、纸张主题，或进入专注模式，让页面只剩下文字。</p></article></div></section>
+    <footer class="site-footer"><span>epubreader <small>by ChemEx</small></span><span>一本书，一段属于自己的时间。</span></footer>
+  </main>
+  <input id="file" type="file" accept=".epub,application/epub+zip" hidden>
+  <section id="reader" class="reader" role="dialog" aria-modal="true" aria-label="电子书阅读器" hidden>
+    <header class="reader-header"><div class="reader-left"><button id="back" class="icon" aria-label="返回书架" title="返回书架"></button><button class="icon" data-panel="contents" aria-label="目录" title="目录"></button><button class="icon" data-panel="search" aria-label="搜索书内文字" title="搜索书内文字"></button><div class="reader-title"><strong id="book-title"></strong><small id="book-author"></small></div></div><div class="reader-actions"><span class="local-badge">◈ <span>此设备</span></span><div class="mode-control" aria-label="阅读模式"><button id="page-mode" class="active" aria-pressed="true">▣ <span>分页</span></button><button id="scroll-mode" aria-pressed="false">▤ <span>滚动</span></button></div><button class="icon aa" data-panel="settings" aria-label="阅读设置" title="阅读设置">Aa</button><button id="bookmark" class="icon" aria-label="添加书签" title="添加书签" aria-pressed="false"></button><button class="icon" data-panel="notes" aria-label="书签与笔记" title="书签与笔记"></button><button id="focus" class="icon" aria-label="进入专注模式" title="专注模式"></button></div></header>
+    <div class="reading-area"><div id="viewer" class="viewer"></div><button id="previous" class="edge previous" aria-label="上一页" title="上一页"></button><button id="next" class="edge next" aria-label="下一页" title="下一页"></button><div id="book-loading" class="book-loading" hidden>正在打开书籍…</div></div>
+    <div class="reader-hint"><span id="wheel-hint">↕ 滚轮翻页</span><span>← → 方向键翻页 · Esc 退出专注</span></div><footer class="reader-footer"><button id="chapter-label" class="text-button" data-panel="contents">目录</button><div class="progress-wrap"><output id="percentage">0%</output><input id="progress" type="range" min="0" max="1000" value="0" aria-label="阅读进度" disabled></div></footer>
+    <aside id="panel" class="panel" aria-label="阅读工具" hidden><header><h2 id="panel-title"></h2><button id="close-panel" class="icon" aria-label="关闭面板">×</button></header><div id="panel-body"></div></aside>
+    <button id="exit-focus" class="exit-focus secondary" hidden>退出专注 · Esc</button>
+    <div id="selection-tools" class="selection-tools" hidden><button id="highlight">荧光标记</button><button id="add-note">添加笔记</button></div>
+  </section>
+  <dialog id="note-dialog"><form method="dialog"><h2>添加笔记</h2><blockquote id="note-quote"></blockquote><textarea id="note-text" placeholder="写下你的想法…" aria-label="笔记内容" rows="5"></textarea><div class="dialog-actions"><button value="cancel" class="secondary">取消</button><button id="save-note" value="save" class="primary">保存笔记</button></div></form></dialog>
+  <dialog id="delete-dialog"><form method="dialog"><h2>移除这本书？</h2><p>将从此浏览器移除书籍及其阅读记录。原 EPUB 文件不会被删除。</p><div class="dialog-actions"><button value="cancel" class="secondary">取消</button><button value="delete" class="primary">移除</button></div></form></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

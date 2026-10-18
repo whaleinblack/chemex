@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, redirect, request, send_from_directory
 
 from .services_sesami import get_sesami_status, parse_upload as parse_sesami_upload, run_workflow as run_sesami_workflow
 from .services_zeopp import detect_zeopp_binary, run_workflow as run_zeopp_workflow
@@ -316,6 +316,17 @@ def index() -> Any:
     if DIST_DIR.exists():
         return send_from_directory(DIST_DIR, 'index.html')
     return jsonify({'error': 'Frontend build not found. Run npm run build first.'}), 503
+
+
+@app.get('/epubreader')
+def epubreader_redirect() -> Any:
+    # Keep relative reader assets within the reader's own URL namespace.
+    return redirect(request.path + '/', code=308)
+
+
+@app.get('/epubreader/')
+def epubreader() -> Any:
+    return send_from_directory(DIST_DIR / 'epubreader', 'index.html')
 
 
 @app.get('/assets/<path:filename>')

@@ -292,3 +292,8 @@ Highest-value next tasks:
 - Preserve raw scientific output and warning visibility.
 - Do not remove the current export paths just because the UI becomes more polished.
 - Update roadmap, guideline, and handoff whenever a new engine or domain rule is introduced.
+
+
+## EPUB reader (2026-10-18)
+
+Added the independent /epubreader/ tool with mouse-wheel page navigation, local books, search, bookmarks and notes. Source: public/epubreader/. See [EPUB Reader](EPUB_READER.md) for the release layout, rollback and verification steps. Production serves the reader from a separate Nginx alias to preserve existing server changes.

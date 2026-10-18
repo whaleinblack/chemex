@@ -296,3 +296,8 @@ If we only fund one next sprint, the best return is:
 4. persistent job/result storage
 
 That combination would move ChemEx from “working prototype” to “real internal research tool.”
+
+
+## Delivered: independent EPUB reader (2026-10-18)
+
+A separate /epubreader/ tool now provides browser-local EPUB reading with wheel paging, keyboard navigation, chapter contents, search, local progress, bookmarks, notes and reading themes. Account/cloud synchronization and DRM are outside this release. See [EPUB Reader](EPUB_READER.md).

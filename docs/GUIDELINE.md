@@ -327,3 +327,8 @@ When in doubt, prioritize in this order:
 4. only then add a new heavyweight engine
 
 This keeps ChemEx credible as a scientific tool rather than a shallow feature list.
+
+
+## Independent EPUB reader
+
+The user-requested reader is isolated at /epubreader/ and uses its own local storage namespace. Scientific workflows keep their existing architecture and branding. See [EPUB Reader](EPUB_READER.md) for storage, content isolation and deployment rules.
