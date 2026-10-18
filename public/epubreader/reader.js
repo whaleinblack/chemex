@@ -286,6 +286,7 @@
           doc.addEventListener('wheel',onWheel,{passive:false,capture:true});
           doc.addEventListener('keydown',onKey);
           doc.addEventListener('click',event=>{
+            if(activePanel==='settings'){closePanel();event.preventDefault();event.stopImmediatePropagation();return;}
             const link=event.target.closest?.('a[href]');const href=link?.getAttribute('href');
             if(!href||/^[a-z]+:/i.test(href))return;
             event.preventDefault();event.stopImmediatePropagation();
@@ -541,6 +542,7 @@
   }
 
   document.addEventListener('click',async e=>{
+    if(activePanel==='settings'&&e.target.closest('#reader')&&!e.target.closest('#panel,button,input,a,select,textarea,label,[role=button]'))closePanel();
     const target=e.target.closest('button');if(!target)return;
     if(target.hasAttribute('data-upload')){$('#file').click();return;}
     if(target.dataset.book){await openBook(records.find(r=>r.id===target.dataset.book));return;}
