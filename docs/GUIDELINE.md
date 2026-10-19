@@ -1,5 +1,7 @@
 # ChemEx Development Guideline
 
+Standalone non-scientific tools (EPUB reader and `/pachong/` film discovery) use isolated URL prefixes, releases and services where required. They must not change computation contracts, replace the main deployment or restart unrelated services. See `PACHONG.md` for the fixed-origin metadata adapter and direct browser streaming boundary.
+
 ## 1. Purpose
 
 This document defines how ChemEx should be extended.

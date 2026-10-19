@@ -301,3 +301,7 @@ That combination would move ChemEx from “working prototype” to “real inter
 ## Delivered: independent EPUB reader (2026-10-18)
 
 A separate /epubreader/ tool now provides browser-local EPUB reading with wheel paging, keyboard navigation, chapter contents, search, local progress, bookmarks, notes and reading themes. Account/cloud synchronization and DRM are outside this release. See [EPUB Reader](EPUB_READER.md).
+# Standalone tools update — 2026-10-20
+
+`/pachong/` adds film discovery, search, details and in-page HLS playback, with local viewing history. It is isolated from scientific engine work. See `PACHONG.md` for supported behavior and source-availability limitations.
+
