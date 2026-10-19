@@ -58,6 +58,10 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(state[0],'429 Too Many Requests')
         upstream.assert_not_called()
 
+    def test_poster_proxy_rejects_other_hosts_ports_and_redirects(self):
+        for url in ['http://img3.doubanio.com/lpic/a.jpg','https://localhost/lpic/a.jpg','https://img3.doubanio.com:443/lpic/a.jpg','https://img3.doubanio.com.example/lpic/a.jpg','https://img3.doubanio.com/secret.txt','https://user@img3.doubanio.com/lpic/a.jpg']:
+            with self.assertRaises(ValueError): server.poster_bytes(url)
+
 
 if __name__=='__main__':
     unittest.main()

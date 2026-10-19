@@ -16,6 +16,7 @@ CACHE = OrderedDict()
 LOCK = threading.RLock()
 FETCH_LOCK = threading.Lock()
 VISITS = OrderedDict()
+POSTER_CACHE = OrderedDict()
 TAGS = ['热门','最新','经典','豆瓣高分','冷门佳片','华语','欧美','韩国','日本','动作','喜剧','爱情','科幻','悬疑','恐怖','动画','豆瓣top250']
 
 
@@ -110,6 +111,30 @@ def remote_url(value):
     except ValueError:
         pass
     return ''
+
+
+def poster_bytes(url):
+    parsed=urlsplit(url)
+    if (parsed.scheme!='https' or not re.fullmatch(r'img[1-9]\.doubanio\.com',parsed.netloc)
+            or not re.fullmatch(r'/(?:view/photo/[\w/-]+|lpic)/[\w.-]+\.(?:jpg|png|webp)',parsed.path,re.I)
+            or parsed.query or parsed.fragment):
+        raise ValueError('Unsupported poster URL')
+    with LOCK:
+        hit=POSTER_CACHE.get(url)
+        if hit and time.time()-hit[0]<3600: return hit[1],hit[2]
+    # No redirects: the validated image host is the only request destination.
+    class NoRedirect(HTTPRedirectHandler):
+        def redirect_request(self,*args,**kwargs): return None
+    req=Request(url,headers={'User-Agent':'Mozilla/5.0 (compatible; ChemEx-Pachong/1.0)', 'Referer':'https://movie.douban.com/'})
+    with build_opener(NoRedirect()).open(req,timeout=8) as response:
+        mime=response.headers.get_content_type()
+        raw=response.read(512*1024+1)
+        if len(raw)>512*1024 or mime not in ('image/jpeg','image/png','image/webp'):
+            raise ValueError('Unsupported poster response')
+    with LOCK:
+        POSTER_CACHE[url]=(time.time(),raw,mime)
+        while len(POSTER_CACHE)>64: POSTER_CACHE.popitem(last=False)
+    return raw,mime
 
 
 def movie_items(root):
@@ -228,7 +253,12 @@ def app(environ, start_response):
         if environ.get('REQUEST_METHOD')!='GET':
             start_response('405 Method Not Allowed',headers)
             return [b'Method not allowed']
-        if path.startswith('/pachong/api/'):
+        if path=='/pachong/poster':
+            params=parse_qs(environ.get('QUERY_STRING',''),max_num_fields=1)
+            body,mime=poster_bytes(params.get('url',[''])[0])
+            headers=[h for h in headers if h[0]!='Cache-Control']
+            headers.extend([('Content-Type',mime),('Cache-Control','public, max-age=3600')])
+        elif path.startswith('/pachong/api/'):
             if not path.endswith('/health'):
                 ip = environ.get('HTTP_X_REAL_IP') or environ.get('REMOTE_ADDR','local')
                 now = time.monotonic()

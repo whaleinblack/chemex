@@ -14,6 +14,8 @@ URL: `https://chemex.space/pachong/`. Independent film search and in-page HLS pl
 
 Only the fixed upstream HTTPS host is fetched by the server. Redirects stay on that host. Category, path, film id and query inputs are validated; HTML is reduced to metadata and rendering escapes strings. Source scripts, analytics and ad code are never executed/imported. Playback metadata is decoded using JSON, never `eval`. Responses have a 15-second upstream timeout, 3 MiB limit, 180-second/128-entry cache, serialized cache misses and 80 API requests/minute/IP (one worker). HTTPS media only. Do not expose an arbitrary URL fetch/proxy endpoint.
 
+Poster thumbnails from `img1`–`img9.doubanio.com` use a separate constrained image cache because direct browser loading may fail. Only HTTPS, the default port and recognized poster paths are accepted; no redirects, query strings, credentials, SVG or arbitrary hosts. The cache holds up to 64 images (512 KiB limit each), expires after one hour and uses an 8-second request timeout. Other cover sources load directly and failures show a placeholder. This endpoint never serves movie files.
+
 ## Checks
 
 `python -m unittest discover -s tools/pachong -p test_server.py`
