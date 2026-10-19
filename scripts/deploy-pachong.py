@@ -15,6 +15,39 @@ def run(*args):
     subprocess.run(args,check=True)
 
 
+def update_nginx(original):
+    marker='# BEGIN ChemEx Pachong'
+    if marker not in original and any(path in original for path in ['/pachong','/miying']):
+        raise RuntimeError('Unmanaged film route configuration')
+    if '/miying' in original:
+        managed=re.search(r'    # BEGIN ChemEx Pachong.*?    # END ChemEx Pachong\n\n',original,re.S)
+        if not managed or '/miying' in original.replace(managed[0],''):
+            raise RuntimeError('Unmanaged /miying configuration')
+    stanza='''    # BEGIN ChemEx Pachong
+    location = /miying { return 308 /miying/$is_args$args; }
+    location ^~ /miying/ {
+        proxy_pass http://127.0.0.1:4198/pachong/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 40;
+    }
+    location = /pachong { return 308 /miying/$is_args$args; }
+    location ^~ /pachong/ {
+        rewrite ^/pachong/(.*)$ /miying/$1 permanent;
+    }
+    # END ChemEx Pachong
+
+'''
+    if marker in original:
+        result,count=re.subn(r'    # BEGIN ChemEx Pachong.*?    # END ChemEx Pachong\n\n',lambda _:stanza,original,flags=re.S)
+        if count!=1: raise RuntimeError('Unexpected film route markers')
+        return result
+    anchor='    # BEGIN ChemEx EPUB Reader'
+    if original.count(anchor)!=1: raise RuntimeError('Expected unique ChemEx TLS anchor')
+    return original.replace(anchor,stanza+anchor,1)
+
+
 def main():
     commit,archive_path=sys.argv[1:]
     if not re.fullmatch('[0-9a-f]{40}',commit):
@@ -22,28 +55,10 @@ def main():
     base=Path('/srv/chemex/pachong')
     config=Path('/etc/nginx/sites-available/chemex-space.conf')
     service=Path('/etc/systemd/system/chemex-pachong.service')
-    marker='# BEGIN ChemEx Pachong'
     original=config.read_text()
-    if '/pachong' in original and marker not in original:
-        raise RuntimeError('Unmanaged /pachong config; inspect before deploying')
     if service.exists() and 'Description=ChemEx Pachong' not in service.read_text():
         raise RuntimeError('Unmanaged service')
-    stanza='''    # BEGIN ChemEx Pachong
-    location = /pachong { return 308 /pachong/; }
-    location ^~ /pachong/ {
-        proxy_pass http://127.0.0.1:4198;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 40;
-    }
-    # END ChemEx Pachong
-
-'''
-    anchor='    # BEGIN ChemEx EPUB Reader'
-    if marker not in original and original.count(anchor)!=1:
-        raise RuntimeError('Expected a unique ChemEx TLS anchor')
-    replacement=original if marker in original else original.replace(anchor,stanza+anchor,1)
+    replacement=update_nginx(original)
     release=base/'releases'/commit
     release.mkdir(parents=True,exist_ok=False)
     with tarfile.open(archive_path) as archive:

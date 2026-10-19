@@ -1,6 +1,6 @@
-# Pachong / 觅影
+# 觅影 / Miying
 
-URL: `https://chemex.space/pachong/`. Independent film search and in-page HLS player, using the reference site's public metadata and playback listings. This is an original adapter/UI implementation, not the reference site's server source.
+URL: `https://chemex.space/miying/`. Independent film search and in-page HLS player, using the reference site's public metadata and playback listings. This is an original adapter/UI implementation, not the reference site's server source.
 
 ## Features and source
 
@@ -34,3 +34,7 @@ The helper installs `/srv/chemex/pachong/releases/<commit>` and atomically switc
 Failed deployment restores the previous symlink, service and Nginx config. Manual rollback: stop the Pachong service, repoint `current` to the previous release and restart it; for first install, also restore the saved Nginx config, validate/reload, disable the new service. Config/service backups are under `pachong/backups/<UTC timestamp>/`.
 
 Verify `/pachong/api/health`, `/pachong/api/home`, `/`, `/api/health`, `/epubreader/`, `chemex-pachong.service`, `chemex.service` and Nginx after deployment; then test search-to-playback in the live browser.
+
+## Canonical URL migration
+
+The public prefix is /miying/. The old /pachong/ prefix redirects permanently, preserving its tail and query; browser fragment routes continue on the new URL. Nginx translates /miying/ to the existing loopback /pachong/ application prefix. Internal source directories, release paths and service names are retained to avoid unrelated migration. The server-level owner auth gate applies to the new prefix, its APIs and assets. The history localStorage key and domain stay unchanged. Run python scripts/test_miying_routes.py for route replacement, ownership, gate preservation and canonical homepage-link checks.

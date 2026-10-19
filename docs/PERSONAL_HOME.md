@@ -9,7 +9,7 @@ The compact revision removes the introductory hero, descriptive section prose an
 | Section | Tool | URL |
 | --- | --- | --- |
 | 科研 / Research | Existing COF workbench | `/research/` |
-| 娱乐 / Leisure | Film discovery/player | `/pachong/` |
+| 娱乐 / Leisure | Film discovery/player | `/miying/` |
 | 娱乐 / Leisure | Local EPUB reader | `/epubreader/` |
 | 生活 / Everyday | Existing survival app | `/survival/` |
 
@@ -21,7 +21,7 @@ Commit and push first. Tar exactly `index.html`, `style.css`, `favicon.svg`, `ra
 
 The helper installs `/srv/chemex/home/releases/<commit>`, with home assets under `assets/`, and copies the **current server's** `/srv/chemex/app/dist` into that release's `research/` directory. This snapshot stays on the server; do not commit independent live modifications or private runtime fonts. The original server checkout, backend, calculation data and app services are not overwritten/restarted. On later research frontend changes, refresh the research snapshot through a new home release after verifying the changed workbench.
 
-Nginx gains only a marked block: exact `/` serves the new home; `/home-assets/` serves its assets; `/research` redirects to `/research/`; `/research/` serves the captured frontend; `/research/api/` maps to the existing `/api/` backend routes on port 4180. The existing root `/api/`, `/assets/`, `/pachong/`, `/epubreader/`, `/survival/` and unrelated host routes remain intact. Relative frontend module assets and all relative API endpoints resolve within the research prefix. No Vite rebuild of the old scientific app is part of this portal-only deployment.
+Nginx gains only a marked block: exact `/` serves the new home; `/home-assets/` serves its assets; `/research` redirects to `/research/`; `/research/` serves the captured frontend; `/research/api/` maps to the existing `/api/` backend routes on port 4180. The existing root `/api/`, `/assets/`, `/miying/`, `/epubreader/`, `/survival/` and unrelated host routes remain intact. Relative frontend module assets and all relative API endpoints resolve within the research prefix. No Vite rebuild of the old scientific app is part of this portal-only deployment.
 
 The helper backs up Nginx, atomically switches `current`, validates and reloads Nginx, and restores config/symlink on failure. Manual rollback for an established home: restore the previous `current` and saved Nginx config, validate and reload. For the first home deployment, restore the original config. Backups are under `/srv/chemex/home/backups/<UTC timestamp>/`.
 

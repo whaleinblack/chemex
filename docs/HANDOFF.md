@@ -315,3 +315,6 @@ The film player handles Space for play/pause and left/right arrows for 10-second
 ## Private owner access and compact portal
 
 Owner selected the existing Survival MX player identity for the entire ChemEx domain. `tools/auth/` and `deploy-auth.py` add a server-side gate with 30-day device sessions; the existing MX password is imported as a hash on the host, with no secret output. The authenticated Survival bootstrap restores MX without another login. All app/API/asset paths are protected; only auth endpoints remain reachable anonymously. See `OWNER_AUTH.md` before touching authentication or restoring Nginx backups. Homepage now removes the introductory hero and uses compact cards; do not re-add the large introduction.
+
+Film canonical URL is now /miying/; legacy /pachong/ redirects. Internal service/source names remain pachong. deploy-pachong.py now replaces its managed Nginx block and retains the inherited owner auth gate. All app pages/APIs/assets require the existing MX session; login remains remembered across navigation and the URL change.
+
