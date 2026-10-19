@@ -311,3 +311,7 @@ Independent `/pachong/` film search/details/player lives in `tools/pachong/`, se
 The root is now a personal portal (`tools/home/`), with COF under research `/research/`, film and EPUB under leisure, and survival under life. `deploy-home.py` preserves the live scientific frontend as a server-side snapshot and routes its relative APIs to the existing backend. See [Personal home](PERSONAL_HOME.md). The scientific product guidance applies within the research tool; domain-level identity is now personal. Existing book storage URLs remain unchanged.
 
 The film player handles Space for play/pause and left/right arrows for 10-second seeks, avoiding text fields, focused controls, modifiers and unloaded/no-video views. `player-shortcuts.js` must ship before `app.js`. Run `node --test scripts/test-player-shortcuts.cjs` and verify real browser playback/seek, including native video focus and search input isolation.
+
+## Private owner access and compact portal
+
+Owner selected the existing Survival MX player identity for the entire ChemEx domain. `tools/auth/` and `deploy-auth.py` add a server-side gate with 30-day device sessions; the existing MX password is imported as a hash on the host, with no secret output. The authenticated Survival bootstrap restores MX without another login. All app/API/asset paths are protected; only auth endpoints remain reachable anonymously. See `OWNER_AUTH.md` before touching authentication or restoring Nginx backups. Homepage now removes the introductory hero and uses compact cards; do not re-add the large introduction.

@@ -1,6 +1,8 @@
 # ChemEx personal homepage
 
-The root `https://chemex.space/` is the owner's personal portal. `tools/home/` contains its buildless HTML/CSS, local Rajdhani font and license, and original SVG/CSS artwork. It makes no requests to external APIs and has no account or analytics dependency.
+The root `https://chemex.space/` is the owner's personal portal. `tools/home/` contains its buildless HTML/CSS, local Rajdhani font and license, and original SVG/CSS artwork. The page makes no requests to external APIs and has no analytics dependency. Its account gate is implemented by the separate owner-auth service.
+
+The compact revision removes the introductory hero, descriptive section prose and large artwork. All four tool entries fit in a normal desktop viewport; mobile uses short stacked cards. The header's account link opens `/auth/account` for logout/device revocation. The whole domain is now protected using the existing Survival MX credentials, with a remembered 30-day device session; see `OWNER_AUTH.md`. No new account/password is created.
 
 ## Navigation
 
