@@ -13,7 +13,9 @@ It exists to keep product decisions, code changes, deployment behavior, and scie
 
 ### 2.1 Product Identity
 
-ChemEx is:
+The domain root is now the owner's personal homepage, organized into research, leisure and everyday life (owner request, 2026-10-20). The COF application remains a dedicated research tool under `/research/`. See `PERSONAL_HOME.md`; keep scientific semantics and the rules below within that workbench.
+
+The research workbench is:
 
 - a COF / porous-material computation workbench
 - bilingual by default

@@ -305,3 +305,9 @@ Reading preferences are now stored per book (IndexedDB v3) and ordinary body typ
 ## Pachong / film discovery (2026-10-20)
 
 Independent `/pachong/` film search/details/player lives in `tools/pachong/`, served by `chemex-pachong.service` on loopback port 4198. Source data comes from iKanBot public pages and playback listings; movie bytes load directly in the browser. See [Pachong](PACHONG.md) for API boundaries, checks, versioned deployment and rollback. Preserve the existing ChemEx, EPUB and survival applications.
+
+## Personal homepage and player keys (2026-10-20)
+
+The root is now a personal portal (`tools/home/`), with COF under research `/research/`, film and EPUB under leisure, and survival under life. `deploy-home.py` preserves the live scientific frontend as a server-side snapshot and routes its relative APIs to the existing backend. See [Personal home](PERSONAL_HOME.md). The scientific product guidance applies within the research tool; domain-level identity is now personal. Existing book storage URLs remain unchanged.
+
+The film player handles Space for play/pause and left/right arrows for 10-second seeks, avoiding text fields, focused controls, modifiers and unloaded/no-video views. `player-shortcuts.js` must ship before `app.js`. Run `node --test scripts/test-player-shortcuts.cjs` and verify real browser playback/seek, including native video focus and search input isolation.

@@ -1,0 +1,26 @@
+# ChemEx personal homepage
+
+The root `https://chemex.space/` is the owner's personal portal. `tools/home/` contains its buildless HTML/CSS, local Rajdhani font and license, and original SVG/CSS artwork. It makes no requests to external APIs and has no account or analytics dependency.
+
+## Navigation
+
+| Section | Tool | URL |
+| --- | --- | --- |
+| 科研 / Research | Existing COF workbench | `/research/` |
+| 娱乐 / Leisure | Film discovery/player | `/pachong/` |
+| 娱乐 / Leisure | Local EPUB reader | `/epubreader/` |
+| 生活 / Everyday | Existing survival app | `/survival/` |
+
+The root is a navigation page; each existing application keeps its own state, service and API behavior. In particular, `/epubreader/` stays on its original URL so local browser books/preferences remain accessible. Film and survival URLs also stay unchanged.
+
+## Deploy without replacing live scientific changes
+
+Commit and push first. Tar exactly `index.html`, `style.css`, `favicon.svg`, `rajdhani-600.woff2` and `FONT-LICENSE` from `tools/home/`. Upload this archive with `scripts/deploy-home.py`, and run `sudo python3 deploy-home.py <full-commit> <tar>`.
+
+The helper installs `/srv/chemex/home/releases/<commit>`, with home assets under `assets/`, and copies the **current server's** `/srv/chemex/app/dist` into that release's `research/` directory. This snapshot stays on the server; do not commit independent live modifications or private runtime fonts. The original server checkout, backend, calculation data and app services are not overwritten/restarted. On later research frontend changes, refresh the research snapshot through a new home release after verifying the changed workbench.
+
+Nginx gains only a marked block: exact `/` serves the new home; `/home-assets/` serves its assets; `/research` redirects to `/research/`; `/research/` serves the captured frontend; `/research/api/` maps to the existing `/api/` backend routes on port 4180. The existing root `/api/`, `/assets/`, `/pachong/`, `/epubreader/`, `/survival/` and unrelated host routes remain intact. Relative frontend module assets and all relative API endpoints resolve within the research prefix. No Vite rebuild of the old scientific app is part of this portal-only deployment.
+
+The helper backs up Nginx, atomically switches `current`, validates and reloads Nginx, and restores config/symlink on failure. Manual rollback for an established home: restore the previous `current` and saved Nginx config, validate and reload. For the first home deployment, restore the original config. Backups are under `/srv/chemex/home/backups/<UTC timestamp>/`.
+
+Verify root title and all four tool links, desktop/mobile layout, the research JS/CSS/font assets, `/research/api/health`, `/research/api/zeopp/status`, `/api/health`, all existing tool routes and service health. Compare the research HTML hash to the original live app to verify the snapshot is byte-identical. Open the scientific UI and confirm the real API health and both workbench tabs, without starting unsolicited scientific jobs.

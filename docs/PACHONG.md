@@ -9,6 +9,7 @@ URL: `https://chemex.space/pachong/`. Independent film search and in-page HLS pl
 - Latest movie/TV home lists, keyword/cast search, movie/TV category filters, ranking list, upstream pagination and film details.
 - Same-page native video controls plus HLS.js **1.7.3**, BSD-2-Clause license vendored alongside the fixed distribution. Prefer MediaSource HLS when supported, with native HLS fallback. No CDN dependency for player code.
 - Multiple playback lines, episode selection, playback speeds, retry, next episode and automatic advancement within the current line.
+- Keyboard controls on the playback page: Space toggles play/pause; left/right arrows seek backward/forward 10 seconds with media-boundary clamping. Search/text fields, focused selects/buttons/links, modifiers and unloaded/no-video views retain their own behavior. Native video default handling is consumed to prevent double toggles. Holding Space does not toggle repeatedly. Run `node --test scripts/test-player-shortcuts.cjs` in addition to server checks.
 - Latest 60 viewed films, line/episode selection and approximate position saved in browser localStorage. Errors/corrupt storage fall back gracefully. Records stay in that browser; no account sync.
 - Upstream availability, format, geographic access and third-party CORS determine whether an individual line works. Display errors and allow line switching; never claim all returned lines have been validated. Video bytes stream directly from their sources; ChemEx does not download/store/rehost movies or proxy arbitrary media URLs. Source-embedded ads may still appear in video.
 
@@ -26,7 +27,7 @@ Tests cover metadata/deduplication, unsafe URL rejection, safe episode parsing, 
 
 ## Deployment
 
-Commit/push first. Create a tar of `tools/pachong/` containing only `server.py`, `index.html`, `style.css`, `app.js`, and `vendor/`. Upload it and `scripts/deploy-pachong.py`; invoke `sudo python3 deploy-pachong.py <full-commit> <tar>` on the host.
+Commit/push first. Create a tar of `tools/pachong/` containing only `server.py`, `index.html`, `style.css`, `player-shortcuts.js`, `app.js`, and `vendor/`. Upload it and `scripts/deploy-pachong.py`; invoke `sudo python3 deploy-pachong.py <full-commit> <tar>` on the host.
 
 The helper installs `/srv/chemex/pachong/releases/<commit>` and atomically switches `current`, preserves the existing Nginx config, creates/updates only `chemex-pachong.service`, verifies loopback health, validates and reloads Nginx. The new service listens only on `127.0.0.1:4198` using `/srv/chemex/venv/bin/gunicorn`. `/pachong` redirects to `/pachong/`; the prefix proxies to this dedicated service. Shared ChemEx and EPUB sources/services are not replaced or restarted. Existing unmanaged path/service/port conflicts stop the deployment.
 

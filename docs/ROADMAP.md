@@ -2,7 +2,7 @@
 
 ## 1. Product Positioning
 
-ChemEx is a bilingual web toolbox for COF and porous-material computation.
+ChemEx is the owner's personal portal with research, leisure and everyday-life sections. The bilingual COF and porous-material computation toolbox lives under `/research/`; film discovery and EPUB reading belong to leisure, and survival belongs to everyday life. Scientific engine plans below continue within the research workbench. See `PERSONAL_HOME.md`.
 
 The near-term product goal is not to reproduce upstream websites, but to turn mature open-source calculation cores into a clean, research-friendly web workbench with:
 

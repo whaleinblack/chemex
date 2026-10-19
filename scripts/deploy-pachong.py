@@ -56,7 +56,7 @@ def main():
             else:
                 target.parent.mkdir(parents=True,exist_ok=True)
                 with archive.extractfile(member) as src,target.open('wb') as dest: shutil.copyfileobj(src,dest)
-    for name in ['server.py','index.html','app.js','style.css','vendor/hls.min.js','vendor/LICENSE']:
+    for name in ['server.py','index.html','app.js','style.css','player-shortcuts.js','vendor/hls.min.js','vendor/LICENSE']:
         if not (release/name).is_file(): raise RuntimeError('Incomplete release')
     for path in [release,*release.rglob('*')]: path.chmod(0o755 if path.is_dir() else 0o644)
     current=base/'current'

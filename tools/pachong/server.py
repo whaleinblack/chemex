@@ -276,7 +276,7 @@ def app(environ, start_response):
             headers.append(('Content-Type','application/json; charset=utf-8'))
         else:
             name = path.removeprefix('/pachong/').strip('/') or 'index.html'
-            allowed = {'index.html','app.js','style.css','vendor/hls.min.js','vendor/LICENSE'}
+            allowed = {'index.html','app.js','style.css','player-shortcuts.js','vendor/hls.min.js','vendor/LICENSE'}
             if not path.startswith('/pachong/') or name not in allowed:
                 raise FileNotFoundError()
             body = (ROOT/name).read_bytes()
