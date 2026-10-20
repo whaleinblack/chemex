@@ -28,6 +28,12 @@ def main():
     location ^~ /home-assets/ {
         alias /srv/chemex/home/current/assets/;
     }
+    location = /favicon.ico {
+        alias /srv/chemex/home/current/assets/favicon.ico;
+    }
+    location = /apple-touch-icon.png {
+        alias /srv/chemex/home/current/assets/apple-touch-icon.png;
+    }
     location = /research { return 308 /research/; }
     location ^~ /research/api/ {
         proxy_pass http://127.0.0.1:4180/api/;
@@ -55,7 +61,7 @@ def main():
         replacement=original.replace(anchor,stanza+anchor,1)
     release=base/'releases'/commit
     release.mkdir(parents=True,exist_ok=False)
-    allowed={'index.html','style.css','favicon.svg','rajdhani-600.woff2','FONT-LICENSE'}
+    allowed={'index.html','style.css','favicon.svg','favicon.png','favicon.ico','apple-touch-icon.png','rajdhani-600.woff2','FONT-LICENSE'}
     (release/'assets').mkdir()
     with tarfile.open(archive_path) as archive:
         for member in archive.getmembers():
