@@ -18,14 +18,15 @@
           const range=document.createRange();range.selectNodeContents(clock);const r=range.getBoundingClientRect();
           const desktop=clock.matches('.desktop-time-panel strong');
           let left=r.right+10;
+          let top=r.top+(r.height-56)/2-(desktop?8:4);
           if(!desktop){
             const bar=clock.closest('.top-bar');
             const settings=bar && [...bar.querySelectorAll('.mobile-module-settings,button[aria-label*="设置"],button[title*="设置"]')].filter(visible).map(e=>e.getBoundingClientRect()).filter(box=>box.left>=r.right).sort((a,b)=>a.left-b.left)[0];
             left=settings?(r.right+settings.left-56)/2:r.right+4;
+            if(settings)top=settings.top+(settings.height-56)/2;
           }
           link.style.left=Math.max(8,Math.min(left,innerWidth-64))+'px';
-          const lift=desktop?8:4;
-          link.style.top=Math.max(8,r.top+(r.height-56)/2-lift)+'px';
+          link.style.top=Math.max(8,top)+'px';
         }
       }else{
         const brand=document.querySelector('header.top > .brand,.site-header > .brand,.chemex-brand-group > .brand');

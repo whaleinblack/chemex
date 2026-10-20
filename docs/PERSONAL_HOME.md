@@ -50,3 +50,5 @@ Home shortcuts on Miying, COF and EPUB are placed inline immediately to the righ
 The Survival mobile title shortcut has an additional 4px upward visual offset; the desktop clock offset remains 8px and other apps keep their inline brand placement.
 
 On mobile Survival, the home shortcut is horizontally centered in the measured gap between the title text and the nearest settings button. Its 4px upward offset and all desktop/other-app placements remain unchanged.
+
+Survival mobile now aligns the home shortcut vertically to the measured center of the settings button, while keeping the horizontal gap centered. Desktop and other apps retain their existing placement.
