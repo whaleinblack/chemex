@@ -318,3 +318,8 @@ Owner selected the existing Survival MX player identity for the entire ChemEx do
 
 Film canonical URL is now /miying/; legacy /pachong/ redirects. Internal service/source names remain pachong. deploy-pachong.py now replaces its managed Nginx block and retains the inherited owner auth gate. All app pages/APIs/assets require the existing MX session; login remains remembered across navigation and the URL change.
 
+
+
+## Unified visual theme (2026-10-20)
+
+Home, film, EPUB and owner-account pages align with the existing cool white / blue-gray COF and Survival visual language; COF/research and Survival receive no changes. Light and dark variants use the same tokens, typography, borders and controls. See [Shared theme](THEME.md) for scope, deployment and rollback.

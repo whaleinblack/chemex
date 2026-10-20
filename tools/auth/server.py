@@ -167,7 +167,7 @@ class Auth:
         except Exception:
             status='503 Service Unavailable';body='Authentication temporarily unavailable'
         if mime.startswith('text/html'):
-            headers.append(('Content-Security-Policy',"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"))
+            headers.append(('Content-Security-Policy',"default-src 'none'; img-src 'self'; style-src 'self' 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"))
         raw=body.encode()
         headers.extend([('Content-Type',mime),('Content-Length',str(len(raw)))])
         start(status,headers)

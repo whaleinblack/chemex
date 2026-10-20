@@ -27,3 +27,5 @@ Rollback: restore the previous auth source/service if available and retain a fun
 ## Public site icons
 
 Safari can fetch bookmark icons without the owner session. Only these exact image paths bypass auth: `/favicon.ico`, `/apple-touch-icon.png`, `/apple-touch-icon-precomposed.png`, `/site-icon-avatar-v2.png`, `/apple-touch-icon-avatar-v2.png`, `/home-assets/favicon.svg`, `/home-assets/favicon.png` and `/home-assets/apple-touch-icon.png`. They serve the owner-selected avatar from the current home assets. No directory or app route is public. Login/account pages declare the same PNG/touch icons; their CSP permits same-origin images while retaining all other restrictions.
+
+The shared presentation stylesheet at exact `/site-theme.css` is public so the login page can use it. Its source contains only CSS, with no app/user data. Same-origin styles are allowed by login/account CSP. App pages, non-icon assets and APIs retain the owner gate.

@@ -305,3 +305,8 @@ A separate /epubreader/ tool now provides browser-local EPUB reading with wheel 
 
 `/pachong/` adds film discovery, search, details and in-page HLS playback, with local viewing history. It is isolated from scientific engine work. See `PACHONG.md` for supported behavior and source-availability limitations.
 
+
+
+## Unified visual theme (2026-10-20)
+
+Home, film, EPUB and owner-account pages align with the existing cool white / blue-gray COF and Survival visual language; COF/research and Survival receive no changes. Light and dark variants use the same tokens, typography, borders and controls. See [Shared theme](THEME.md) for scope, deployment and rollback.

@@ -336,3 +336,8 @@ This keeps ChemEx credible as a scientific tool rather than a shallow feature li
 ## Independent EPUB reader
 
 The user-requested reader is isolated at /epubreader/ and uses its own local storage namespace. Scientific workflows keep their existing architecture and branding. See [EPUB Reader](EPUB_READER.md) for storage, content isolation and deployment rules.
+
+
+## Unified visual theme (2026-10-20)
+
+Home, film, EPUB and owner-account pages align with the existing cool white / blue-gray COF and Survival visual language; COF/research and Survival receive no changes. Light and dark variants use the same tokens, typography, borders and controls. See [Shared theme](THEME.md) for scope, deployment and rollback.
