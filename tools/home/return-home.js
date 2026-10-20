@@ -17,7 +17,7 @@
         if(clock){
           const range=document.createRange();range.selectNodeContents(clock);const r=range.getBoundingClientRect();
           link.style.left=Math.max(8,Math.min(r.right+10,innerWidth-64))+'px';
-          const lift=clock.matches('.desktop-time-panel strong')?8:0;
+          const lift=clock.matches('.desktop-time-panel strong')?8:4;
           link.style.top=Math.max(8,r.top+(r.height-56)/2-lift)+'px';
         }
       }else{

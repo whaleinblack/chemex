@@ -2,8 +2,8 @@
 import datetime,hashlib,json,os,re,shutil,subprocess,sys,tarfile
 from pathlib import Path
 
-OLD='<script defer src="/home-assets/return-home.js?v=shared-56-20261020"></script>'
-SCRIPT='<script defer src="/home-assets/return-home.js?v=brand-right-20261020"></script>'
+OLD='<script defer src="/home-assets/return-home.js?v=brand-right-20261020"></script>'
+SCRIPT='<script defer src="/home-assets/return-home.js?v=mobile-up4-20261020"></script>'
 
 def update_nginx(original):
     if original.count(OLD)!=4:raise RuntimeError('Expected four existing shortcut tags')
