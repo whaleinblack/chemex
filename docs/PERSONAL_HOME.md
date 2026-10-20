@@ -40,3 +40,7 @@ COF uses the owner-provided jail-bar illustration with transparent exterior and 
 The Survival page includes a 44px transparent character link in the top-left corner back to `/`, named 返回 ChemEx 主页 for accessibility. Its independent script is injected alongside the existing authenticated session bridge; it does not read or change app/account state. deploy-home-navigation.py installs layout and shortcut assets in a new home release and backs up Nginx before adding only that script to the Survival UI filter. Survival app files and APIs stay unchanged.
 
 The homepage omits the research/leisure/life navigation text from the top-right and bottom-right corners, per owner request.
+
+The shared transparent return-home image is now 56px: on Survival it sits to the right of the desktop clock or, on mobile, the 生存计划 title; on Miying, COF and EPUB it sits in the top-left corner. It preserves EPUB back-to-library controls, hides superseded text home links, and uses isolated Nginx HTML script injection without rebuilding or replacing application sources. deploy-return-links.py keeps the previous home release and Nginx configuration for rollback.
+
+The COF entrance omits the handwritten Japanese caption and arrow below the jail frame. All four image boxes share their size, vertical center and caption baseline; illustration proportions stay intact.

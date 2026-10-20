@@ -315,3 +315,5 @@ Home, film, EPUB and owner-account pages align with the existing cool white / bl
 Homepage entrances now use owner-provided transparent illustrations without cards; Survival uses the sleeping-on-pillow image. EPUB adds a per-book 米黄 option while the homepage remains blue-gray. COF and Survival app sources/styles stay untouched. See `PERSONAL_HOME.md` and `EPUB_READER.md`.
 
 Homepage entrances now stay in one compact row with equal image boxes and fit common viewport heights. Survival gains an isolated transparent-image shortcut to the ChemEx homepage; app sources, API behavior and the authentication bridge remain unchanged.
+
+The shared transparent return-home image is now 56px: on Survival it sits to the right of the desktop clock or, on mobile, the 生存计划 title; on Miying, COF and EPUB it sits in the top-left corner. It preserves EPUB back-to-library controls, hides superseded text home links, and uses isolated Nginx HTML script injection without rebuilding or replacing application sources. deploy-return-links.py keeps the previous home release and Nginx configuration for rollback.
