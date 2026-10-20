@@ -1,0 +1,85 @@
+diff --git a/apps/web/index.html b/apps/web/index.html
+index 1878fa3..9f8d484 100644
+--- a/apps/web/index.html
++++ b/apps/web/index.html
+@@ -9,7 +9,7 @@
+   <!-- 前导 / 的 public 资源，Vite 构建时会按 base 重写（GitHub Pages 子路径下也能命中） -->
+   <link rel="icon" type="image/png" href="/favicon.png" />
+   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+-  <title>Realtime Translator</title>
++  <title>ChemEx · 日语实时字幕</title>
+ </head>
+ <body>
+   <div id="app"></div>
+diff --git a/apps/web/src/bridge.ts b/apps/web/src/bridge.ts
+index 489dbfa..a4c405a 100644
+--- a/apps/web/src/bridge.ts
++++ b/apps/web/src/bridge.ts
+@@ -194,13 +194,16 @@ export function createWebBridge(): AppBridge {
+   // ---- 持久化：设置 ----
+   async function readSettings(): Promise<AppSettings> {
+     const defaults = makeDefaults(navigator.languages ? [...navigator.languages] : []);
++    // ChemEx LiveCaptions: fresh browser profiles start with Japanese captions.
++    // Existing settings always take precedence; other platform defaults stay unchanged.
++    defaults.asr = { language: 'ja', model: 'zipformer-ja-reazonspeech' };
+     let raw: unknown = null;
+     try {
+       raw = (await (await db()).get(KV_STORE, SETTINGS_KEY)) ?? null;
+     } catch {
+       raw = null;
+     }
+-    cachedSettings = applyPlatformConstraints(withDefaults(raw, defaults));
++    cachedSettings = applyPlatformConstraints(withDefaults(raw ?? defaults, defaults));
+     return cachedSettings;
+   }
+ 
+diff --git a/apps/web/vite.config.ts b/apps/web/vite.config.ts
+index 1970b8c..d648714 100644
+--- a/apps/web/vite.config.ts
++++ b/apps/web/vite.config.ts
+@@ -10,7 +10,7 @@ import { buildVersion } from '../../scripts/build-version';
+ //
+ // base：默认 '/'，部署到 GitHub Pages（子路径）时用 BASE_PATH 注入，例如
+ //   BASE_PATH=/realtime-translator/ pnpm --filter @rt/web build
+-const base = process.env.BASE_PATH || '/';
++const base = process.env.BASE_PATH || '/livecaptions/';
+ 
+ export default defineConfig({
+   base,
+@@ -26,8 +26,8 @@ export default defineConfig({
+       registerType: 'autoUpdate',
+       includeAssets: ['favicon.png', 'apple-touch-icon.png'],
+       manifest: {
+-        name: 'Realtime Translator',
+-        short_name: 'Realtime',
++        name: 'ChemEx LiveCaptions',
++        short_name: 'LiveCaptions',
+         description: 'Local, real-time speech transcription and translation in your browser',
+         // 浅色应用底色；主题色用品牌粉（与 macOS/iOS 一致）。
+         background_color: '#ffffff',
+diff --git a/docs/product/experience.md b/docs/product/experience.md
+index 1e829f8..7e44a37 100644
+--- a/docs/product/experience.md
++++ b/docs/product/experience.md
+@@ -6,6 +6,8 @@
+ 
+ 首次启动会进入引导页。系统根据设备偏好语言预选中文、日语、英语或韩语；无法匹配时使用英语。用户可在引导中同时确认母语、字号和主题。
+ 
++ChemEx Web 变体在浏览器没有已保存设置时，默认使用日语识别和 ReazonSpeech 模型，翻译保持关闭。已有合法识别设置仍以浏览器中保存的值为准；macOS、iOS 和共享设置规则不受这一 Web 默认值影响。
++
+ “母语”同时决定：
+ 
+ - 应用界面语言；
+diff --git a/docs/product/overview.md b/docs/product/overview.md
+index 3e95fd5..22a0d74 100644
+--- a/docs/product/overview.md
++++ b/docs/product/overview.md
+@@ -2,6 +2,8 @@
+ 
+ Realtime Translator 是面向中文、日语、英语和韩语的实时语音转写与翻译应用。macOS、iOS 和 Web 共用同一套交互与业务规则，音频采集、识别、本地翻译和存储由各平台自行实现。
+ 
++ChemEx 集成的是 Web / PWA 变体：页面标题为“ChemEx · 日语实时字幕”，安装后的应用名为“ChemEx LiveCaptions”，默认部署在 `/livecaptions/`。这些品牌与部署路径不改变 macOS、iOS 或三端共享的产品规则。
++
+ 它面向需要跨语言实时字幕的用户，典型用途包括：
+ 
+ - 面对面对话或单人发言的实时转写与翻译；

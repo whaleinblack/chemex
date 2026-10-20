@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/baijunjie/realtime-translator",
+  "commit": "fa2ab2de94145389448e729551a26dc866cf1282",
+  "licenseDeclaredInPackageJson": "ISC",
+  "localChanges": [
+    "Web-only Japanese ReazonSpeech defaults",
+    "ChemEx title and PWA name",
+    "Default base /livecaptions/"
+  ]
+}

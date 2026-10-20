@@ -1,0 +1,3 @@
+[submodule "tools/livecaptions/upstream"]
+	path = tools/livecaptions/upstream
+	url = https://github.com/baijunjie/realtime-translator.git
