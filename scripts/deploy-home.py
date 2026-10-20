@@ -29,9 +29,43 @@ def main():
         alias /srv/chemex/home/current/assets/;
     }
     location = /favicon.ico {
+        # Public site identity: Safari may fetch icons without the owner cookie.
+        auth_request off;
         alias /srv/chemex/home/current/assets/favicon.ico;
     }
     location = /apple-touch-icon.png {
+        # Public site identity: Safari may fetch icons without the owner cookie.
+        auth_request off;
+        alias /srv/chemex/home/current/assets/apple-touch-icon.png;
+    }
+    location = /apple-touch-icon-precomposed.png {
+        # Public site identity: Safari may fetch icons without the owner cookie.
+        auth_request off;
+        alias /srv/chemex/home/current/assets/apple-touch-icon.png;
+    }
+    location = /site-icon-avatar-v2.png {
+        # Public site identity: Safari may fetch icons without the owner cookie.
+        auth_request off;
+        alias /srv/chemex/home/current/assets/favicon.png;
+    }
+    location = /apple-touch-icon-avatar-v2.png {
+        # Public site identity: Safari may fetch icons without the owner cookie.
+        auth_request off;
+        alias /srv/chemex/home/current/assets/apple-touch-icon.png;
+    }
+    location = /home-assets/favicon.svg {
+        # Public site identity: Safari may fetch icons without the owner cookie.
+        auth_request off;
+        alias /srv/chemex/home/current/assets/favicon.svg;
+    }
+    location = /home-assets/favicon.png {
+        # Public site identity: Safari may fetch icons without the owner cookie.
+        auth_request off;
+        alias /srv/chemex/home/current/assets/favicon.png;
+    }
+    location = /home-assets/apple-touch-icon.png {
+        # Public site identity: Safari may fetch icons without the owner cookie.
+        auth_request off;
         alias /srv/chemex/home/current/assets/apple-touch-icon.png;
     }
     location = /research { return 308 /research/; }

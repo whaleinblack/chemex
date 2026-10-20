@@ -17,6 +17,15 @@ class AuthTests(unittest.TestCase):
         cls.salt=secrets.token_hex(16)
         cls.account={'username':'fixture-owner','salt':cls.salt,'hash':server.password_hash('fixture-only-password',cls.salt),'source':'survival-mx'}
 
+    def test_login_has_anonymous_favicon_links_and_same_origin_image_csp(self):
+        result=self.call('/auth/login')
+        self.assertIn('200',result['status'])
+        self.assertIn('/site-icon-avatar-v2.png',result['body'])
+        self.assertIn('/apple-touch-icon-avatar-v2.png',result['body'])
+        csp=dict(result['headers'])['Content-Security-Policy']
+        self.assertIn("img-src 'self'",csp)
+        self.assertIn("default-src 'none'",csp)
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parent)
         self.root=Path(self.temp.name)

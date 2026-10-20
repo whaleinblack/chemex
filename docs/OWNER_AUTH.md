@@ -1,6 +1,6 @@
 # ChemEx owner access
 
-The canonical `chemex.space` TLS vhost uses an Nginx `auth_request` gate for **all** app pages, static resources and APIs. Only the authentication endpoints are exempt at Nginx; the account, logout and Survival bridge endpoints also verify their own session. HTTP and www continue to canonical HTTPS; ACME certificate validation remains public. Shared hosts are unchanged.
+The canonical `chemex.space` TLS vhost uses an Nginx `auth_request` gate for **all** app pages, static resources and APIs. Authentication endpoints and an exact allowlist of public website-icon files are exempt at Nginx; the account, logout and Survival bridge endpoints also verify their own session. HTTP and www continue to canonical HTTPS; ACME certificate validation remains public. Shared hosts are unchanged.
 
 ## Identity and persistence
 
@@ -23,3 +23,7 @@ Run `python -m unittest discover -s tools/auth -p test_auth.py`. Tests cover val
 After deploy, confirm anonymous access to `/`, `/research/`, `/pachong/`, `/epubreader/`, `/survival/`, their assets and API endpoints is denied/redirected; internal auth endpoint returns 404 externally. Verify valid MX credentials over HTTPS without printing them, remembered cookies, authenticated routes, Survival bootstrap and logout. Only reuse local browser previews or owner-authorized sessions for visual QA; do not add a public bootstrap bypass.
 
 Rollback: restore the previous auth source/service if available and retain a functioning gate. Restoring a pre-auth Nginx backup removes protection and must be intentional; do not do that merely to bypass a login problem after a successful delivery. SSH remains available for recovery.
+
+## Public site icons
+
+Safari can fetch bookmark icons without the owner session. Only these exact image paths bypass auth: `/favicon.ico`, `/apple-touch-icon.png`, `/apple-touch-icon-precomposed.png`, `/site-icon-avatar-v2.png`, `/apple-touch-icon-avatar-v2.png`, `/home-assets/favicon.svg`, `/home-assets/favicon.png` and `/home-assets/apple-touch-icon.png`. They serve the owner-selected avatar from the current home assets. No directory or app route is public. Login/account pages declare the same PNG/touch icons; their CSP permits same-origin images while retaining all other restrictions.

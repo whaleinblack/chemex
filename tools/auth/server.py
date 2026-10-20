@@ -38,7 +38,7 @@ def cookie(name,value,age):
 
 
 def page(title,inner):
-    return f'<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)} · ChemEx</title><style>{STYLE}</style></head><body><main>{inner}<footer>ChemEx · 私人空间</footer></main></body></html>'
+    return f'<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)} · ChemEx</title><link rel="icon" href="/favicon.ico?v=avatar-safari-v2" sizes="64x64"><link rel="icon" href="/site-icon-avatar-v2.png" type="image/png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon-avatar-v2.png" sizes="180x180"><style>{STYLE}</style></head><body><main>{inner}<footer>ChemEx · 私人空间</footer></main></body></html>'
 
 
 class Auth:
@@ -167,7 +167,7 @@ class Auth:
         except Exception:
             status='503 Service Unavailable';body='Authentication temporarily unavailable'
         if mime.startswith('text/html'):
-            headers.append(('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"))
+            headers.append(('Content-Security-Policy',"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"))
         raw=body.encode()
         headers.extend([('Content-Type',mime),('Content-Length',str(len(raw)))])
         start(status,headers)
