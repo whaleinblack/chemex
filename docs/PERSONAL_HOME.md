@@ -48,3 +48,5 @@ The COF entrance omits the handwritten Japanese caption and arrow below the jail
 Home shortcuts on Miying, COF and EPUB are placed inline immediately to the right of their brand row, vertically centered, rather than floating over the top-left page edge. Survival retains title/time adjacency; the desktop icon moves 8px higher to visually align with the clock digits. deploy-return-placement.py updates only the shared script and its cache version, retaining all application resources.
 
 The Survival mobile title shortcut has an additional 4px upward visual offset; the desktop clock offset remains 8px and other apps keep their inline brand placement.
+
+On mobile Survival, the home shortcut is horizontally centered in the measured gap between the title text and the nearest settings button. Its 4px upward offset and all desktop/other-app placements remain unchanged.

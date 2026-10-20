@@ -16,8 +16,15 @@
         link.hidden=!clock;
         if(clock){
           const range=document.createRange();range.selectNodeContents(clock);const r=range.getBoundingClientRect();
-          link.style.left=Math.max(8,Math.min(r.right+10,innerWidth-64))+'px';
-          const lift=clock.matches('.desktop-time-panel strong')?8:4;
+          const desktop=clock.matches('.desktop-time-panel strong');
+          let left=r.right+10;
+          if(!desktop){
+            const bar=clock.closest('.top-bar');
+            const settings=bar && [...bar.querySelectorAll('.mobile-module-settings,button[aria-label*="设置"],button[title*="设置"]')].filter(visible).map(e=>e.getBoundingClientRect()).filter(box=>box.left>=r.right).sort((a,b)=>a.left-b.left)[0];
+            left=settings?(r.right+settings.left-56)/2:r.right+4;
+          }
+          link.style.left=Math.max(8,Math.min(left,innerWidth-64))+'px';
+          const lift=desktop?8:4;
           link.style.top=Math.max(8,r.top+(r.height-56)/2-lift)+'px';
         }
       }else{
