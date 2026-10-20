@@ -17,12 +17,23 @@
         if(clock){
           const range=document.createRange();range.selectNodeContents(clock);const r=range.getBoundingClientRect();
           link.style.left=Math.max(8,Math.min(r.right+10,innerWidth-64))+'px';
-          link.style.top=Math.max(8,r.top+(r.height-56)/2)+'px';
+          const lift=clock.matches('.desktop-time-panel strong')?8:0;
+          link.style.top=Math.max(8,r.top+(r.height-56)/2-lift)+'px';
         }
       }else{
-        // Keep the reader's own back-to-library control and other header controls usable.
-        for(const header of document.querySelectorAll('.site-header,.reader-header,header.top')){
-          if(header.getBoundingClientRect().left<76)header.style.paddingLeft='80px';
+        const brand=document.querySelector('header.top > .brand,.site-header > .brand,.chemex-brand-group > .brand');
+        const cof=document.querySelector('.hero-brand-row');
+        if(brand){
+          let group=brand.parentElement;
+          if(!group.classList.contains('chemex-brand-group')){
+            group=document.createElement('div');group.className='chemex-brand-group';
+            group.style.cssText='display:flex;align-items:center;gap:10px;min-width:0;flex-shrink:0';
+            brand.before(group);group.append(brand);
+          }
+          if(link.parentElement!==group)group.append(link);
+        }else if(cof && link.parentElement!==cof)cof.append(link);
+        if(brand || cof){
+          link.style.position='static';link.style.flex='0 0 56px';link.style.alignSelf='center';
         }
         for(const old of document.querySelectorAll('header.top a.back,.site-header nav a[href="../"]'))old.hidden=true;
       }
