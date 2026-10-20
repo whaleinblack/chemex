@@ -2,7 +2,7 @@
 
 The root `https://chemex.space/` is the owner's personal portal. `tools/home/` contains its buildless HTML/CSS, local Rajdhani font and license, and original SVG/CSS artwork. The page makes no requests to external APIs and has no analytics dependency. Its account gate is implemented by the separate owner-auth service.
 
-The homepage uses four unframed transparent illustration links with short captions. Desktop shows four columns; mobile shows two. The mapping is: computer/work character → COF, glasses/cup/laptop → Miying, sleeping character on pillow → Survival, reading character/book/lamp → EPUB. No card background or entry borders are used. The header's account link opens `/auth/account` for logout/device revocation. The whole domain is now protected using the existing Survival MX credentials, with a remembered 30-day device session; see `OWNER_AUTH.md`. No new account/password is created.
+The homepage uses four unframed transparent illustration links with short captions. Desktop shows four columns; mobile shows two. The mapping is: character behind black jail bars → COF, glasses/cup/laptop → Miying, sleeping character on pillow → Survival, reading character/book/lamp → EPUB. No card background or entry borders are used. The header's account link opens `/auth/account` for logout/device revocation. The whole domain is now protected using the existing Survival MX credentials, with a remembered 30-day device session; see `OWNER_AUTH.md`. No new account/password is created.
 
 ## Navigation
 
@@ -34,3 +34,5 @@ The owner-provided avatar is the site icon. `tools/home/favicon.png` is the reus
 The master was prepared with the built-in imagegen tool using: “Remove only the exterior white background to actual transparent alpha; preserve the white face and ear interiors, eye highlights, expression, black contours and pink cheeks; center the complete head on a square canvas.” Native macOS sips exports the delivery sizes without flattening alpha.
 
 The entrance images were extracted from owner-provided illustrations using built-in imagegen. Only exterior backgrounds are transparent; white character bodies and props remain filled. See `tools/home/entrances/ARTWORK.json` for the per-image prompts and mapping.
+
+COF uses the owner-provided jail-bar illustration with transparent exterior and gaps. EPUB retains its original purple outlines. The asset-only deploy-home-artwork.py helper copies the live home release, replaces only the COF PNG and versions its URL, verifies other resources, then atomically switches current. The previous release remains available for rollback; no service or Nginx changes are needed.
