@@ -2,7 +2,7 @@
 
 The root `https://chemex.space/` is the owner's personal portal. `tools/home/` contains its buildless HTML/CSS, local Rajdhani font and license, and original SVG/CSS artwork. The page makes no requests to external APIs and has no analytics dependency. Its account gate is implemented by the separate owner-auth service.
 
-The homepage uses four unframed transparent illustration links with short captions. Desktop shows four columns; mobile shows two. The mapping is: character behind black jail bars → COF, glasses/cup/laptop → Miying, sleeping character on pillow → Survival, reading character/book/lamp → EPUB. No card background or entry borders are used. The header's account link opens `/auth/account` for logout/device revocation. The whole domain is now protected using the existing Survival MX credentials, with a remembered 30-day device session; see `OWNER_AUTH.md`. No new account/password is created.
+The homepage uses four unframed transparent illustration links with short captions. Both desktop and mobile keep all four entrances in one row with equal image boxes. Image heights are explicit so intrinsic PNG dimensions cannot create excess vertical space. The mapping is: character behind black jail bars → COF, glasses/cup/laptop → Miying, sleeping character on pillow → Survival, reading character/book/lamp → EPUB. No card background or entry borders are used. The header's account link opens `/auth/account` for logout/device revocation. The whole domain is now protected using the existing Survival MX credentials, with a remembered 30-day device session; see `OWNER_AUTH.md`. No new account/password is created.
 
 ## Navigation
 
@@ -17,7 +17,7 @@ The root is a navigation page; each existing application keeps its own state, se
 
 ## Deploy without replacing live scientific changes
 
-Commit and push first. Tar exactly `index.html`, `style.css`, `favicon.svg`, `favicon.png`, `favicon.ico`, `apple-touch-icon.png`, `rajdhani-600.woff2`, `FONT-LICENSE`, and the four `entrances/*.png` files from `tools/home/`. Upload this archive with `scripts/deploy-home.py`, and run `sudo python3 deploy-home.py <full-commit> <tar>`.
+Commit and push first. Tar exactly `index.html`, `style.css`, `favicon.svg`, `favicon.png`, `favicon.ico`, `apple-touch-icon.png`, `rajdhani-600.woff2`, `FONT-LICENSE`, `return-home.png`, `return-home.js`, and the four `entrances/*.png` files from `tools/home/`. Upload this archive with `scripts/deploy-home.py`, and run `sudo python3 deploy-home.py <full-commit> <tar>`.
 
 The helper installs `/srv/chemex/home/releases/<commit>`, with home assets under `assets/`, and copies the **current server's** `/srv/chemex/app/dist` into that release's `research/` directory. This snapshot stays on the server; do not commit independent live modifications or private runtime fonts. The original server checkout, backend, calculation data and app services are not overwritten/restarted. On later research frontend changes, refresh the research snapshot through a new home release after verifying the changed workbench.
 
@@ -36,3 +36,7 @@ The master was prepared with the built-in imagegen tool using: “Remove only th
 The entrance images were extracted from owner-provided illustrations using built-in imagegen. Only exterior backgrounds are transparent; white character bodies and props remain filled. See `tools/home/entrances/ARTWORK.json` for the per-image prompts and mapping.
 
 COF uses the owner-provided jail-bar illustration with transparent exterior and gaps. EPUB retains its original purple outlines. The asset-only deploy-home-artwork.py helper copies the live home release, replaces only the COF PNG and versions its URL, verifies other resources, then atomically switches current. The previous release remains available for rollback; no service or Nginx changes are needed.
+
+The Survival page includes a 44px transparent character link in the top-left corner back to `/`, named 返回 ChemEx 主页 for accessibility. Its independent script is injected alongside the existing authenticated session bridge; it does not read or change app/account state. deploy-home-navigation.py installs layout and shortcut assets in a new home release and backs up Nginx before adding only that script to the Survival UI filter. Survival app files and APIs stay unchanged.
+
+The homepage omits the research/leisure/life navigation text from the top-right and bottom-right corners, per owner request.

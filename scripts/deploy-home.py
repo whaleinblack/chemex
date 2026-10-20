@@ -95,7 +95,7 @@ def main():
         replacement=original.replace(anchor,stanza+anchor,1)
     release=base/'releases'/commit
     release.mkdir(parents=True,exist_ok=False)
-    allowed={'index.html','style.css','favicon.svg','favicon.png','favicon.ico','apple-touch-icon.png','rajdhani-600.woff2','FONT-LICENSE','entrances/cof.png','entrances/miying.png','entrances/survival.png','entrances/epubreader.png'}
+    allowed={'index.html','style.css','favicon.svg','favicon.png','favicon.ico','apple-touch-icon.png','rajdhani-600.woff2','FONT-LICENSE','entrances/cof.png','entrances/miying.png','entrances/survival.png','entrances/epubreader.png','return-home.png','return-home.js'}
     (release/'assets').mkdir()
     with tarfile.open(archive_path) as archive:
         for member in archive.getmembers():

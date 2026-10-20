@@ -344,3 +344,5 @@ Home, film, EPUB and owner-account pages align with the existing cool white / bl
 
 
 Homepage entrances now use owner-provided transparent illustrations without cards; Survival uses the sleeping-on-pillow image. EPUB adds a per-book 米黄 option while the homepage remains blue-gray. COF and Survival app sources/styles stay untouched. See `PERSONAL_HOME.md` and `EPUB_READER.md`.
+
+Homepage entrances now stay in one compact row with equal image boxes and fit common viewport heights. Survival gains an isolated transparent-image shortcut to the ChemEx homepage; app sources, API behavior and the authentication bridge remain unchanged.
