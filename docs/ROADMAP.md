@@ -305,8 +305,3 @@ A separate /epubreader/ tool now provides browser-local EPUB reading with wheel 
 
 `/pachong/` adds film discovery, search, details and in-page HLS playback, with local viewing history. It is isolated from scientific engine work. See `PACHONG.md` for supported behavior and source-availability limitations.
 
-
-
-## LiveCaptions (2026-10-20)
-
-Independent Japanese microphone captions are available at `/livecaptions/`, linked from the personal homepage. The pinned upstream Web PWA runs recognition on-device and inherits the existing owner access gate. Source, build, deployment and rollback: [LiveCaptions](LIVECAPTIONS.md).

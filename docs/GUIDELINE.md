@@ -336,8 +336,3 @@ This keeps ChemEx credible as a scientific tool rather than a shallow feature li
 ## Independent EPUB reader
 
 The user-requested reader is isolated at /epubreader/ and uses its own local storage namespace. Scientific workflows keep their existing architecture and branding. See [EPUB Reader](EPUB_READER.md) for storage, content isolation and deployment rules.
-
-
-## LiveCaptions (2026-10-20)
-
-Independent Japanese microphone captions are available at `/livecaptions/`, linked from the personal homepage. The pinned upstream Web PWA runs recognition on-device and inherits the existing owner access gate. Source, build, deployment and rollback: [LiveCaptions](LIVECAPTIONS.md).

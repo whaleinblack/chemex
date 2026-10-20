@@ -318,8 +318,3 @@ Owner selected the existing Survival MX player identity for the entire ChemEx do
 
 Film canonical URL is now /miying/; legacy /pachong/ redirects. Internal service/source names remain pachong. deploy-pachong.py now replaces its managed Nginx block and retains the inherited owner auth gate. All app pages/APIs/assets require the existing MX session; login remains remembered across navigation and the URL change.
 
-
-
-## LiveCaptions (2026-10-20)
-
-Independent Japanese microphone captions are available at `/livecaptions/`, linked from the personal homepage. The pinned upstream Web PWA runs recognition on-device and inherits the existing owner access gate. Source, build, deployment and rollback: [LiveCaptions](LIVECAPTIONS.md).
