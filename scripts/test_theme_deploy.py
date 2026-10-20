@@ -45,6 +45,13 @@ server {
         self.assertEqual(result.count('/auth/survival-session.js'),1)
         self.assertEqual(result.count('location = /site-theme.css'),1)
         self.assertEqual(result.count('auth_request off;'),2)
+    def test_updates_existing_stylesheet_version_without_duplicate_filters(self):
+        previous=theme.update_nginx(self.fixture()).replace('illustrated-cream-20261020','old-theme-version')
+        result=theme.update_nginx(previous)
+        self.assertNotIn('old-theme-version',result)
+        self.assertEqual(result.count(theme.LINK),4)
+        self.assertIn(SURVIVAL,result);self.assertIn(RESEARCH,result)
+
     def test_missing_gate_or_unmanaged_route_rejected(self):
         with self.assertRaises(RuntimeError):theme.update_nginx(self.fixture().replace('auth_request /_chemex_auth;',''))
         with self.assertRaises(RuntimeError):theme.update_nginx(self.fixture()+'location = /site-theme.css {}')

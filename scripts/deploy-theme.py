@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import sys
 
-LINK='<link rel="stylesheet" href="/site-theme.css?v=blue-gray-20261020">'
+LINK='<link rel="stylesheet" href="/site-theme.css?v=illustrated-cream-20261020">'
 BEGIN='    # BEGIN ChemEx Shared Theme'
 END='    # END ChemEx Shared Theme'
 
@@ -40,7 +40,8 @@ def update_nginx(original):
         pattern=r'(    '+re.escape(target)+r'\n)(.*?)(    }\n)'
         def add_filter(match):
             body=match[2]
-            if '# ChemEx shared theme filter' in body:return match[0]
+            if '# ChemEx shared theme filter' in body:
+                body=re.sub(r'        # ChemEx shared theme filter\n        sub_filter_once on;\n        sub_filter.*?\n        sub_filter.*?\n','',body,flags=re.S)
             if 'sub_filter' in body:raise RuntimeError('Inspect existing filter in '+target)
             injection=f'''        # ChemEx shared theme filter
         sub_filter_once on;

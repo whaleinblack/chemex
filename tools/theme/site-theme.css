@@ -16,32 +16,19 @@
   --cx-accent:#90b4ff; --cx-hover:#263a59; --cx-focus:#90b4ff;
   color-scheme:dark;
 }
-:root[data-theme="paper"],:root[data-theme="sepia"],:root[data-theme="dark"]{
+:root[data-theme="paper"],:root[data-theme="sepia"],:root[data-theme="cream"],:root[data-theme="dark"]{
   --paper:var(--cx-bg);--panel:var(--cx-surface);--wash:var(--cx-raised);
   --ink:var(--cx-ink);--muted:var(--cx-muted);--line:var(--cx-line);
   --accent:var(--cx-accent);--hover:var(--cx-hover);
 }
+:root[data-theme="cream"]{--cx-bg:#f2e8d5;--cx-surface:#fff7e8;--cx-raised:#f7efdf;--cx-ink:#4d402d;--cx-muted:#85765f;--cx-line:#d9cdb7;--cx-hover:#eadfc9}
 body[data-chemex-page]{background:var(--cx-bg);color:var(--cx-ink);font-family:var(--cx-font);-webkit-font-smoothing:antialiased}
 body[data-chemex-page] :is(button,input,select,textarea){font-family:var(--cx-font)}
 body[data-chemex-page] :is(a,button,input,select,textarea):focus-visible{outline:3px solid var(--cx-focus);outline-offset:3px}
 body[data-chemex-page] :is(input,select,textarea){accent-color:var(--cx-accent)}
-/* Compact personal portal */
-body[data-chemex-page="/"] header{height:84px;border-color:var(--cx-line)}
-body[data-chemex-page="/"] .brand{color:var(--cx-ink)}
-body[data-chemex-page="/"] .brand span{color:var(--cx-accent)}
-body[data-chemex-page="/"] .brand i{background:var(--cx-accent)}
+/* The homepage uses unframed transparent image links, not cards. */
 body[data-chemex-page="/"] :is(nav a:hover,.account:hover){color:var(--cx-accent)}
-body[data-chemex-page="/"] main{padding-top:32px;padding-bottom:12px}
-body[data-chemex-page="/"] section{margin-bottom:28px}
-body[data-chemex-page="/"] .section-head{margin-bottom:12px}
-body[data-chemex-page="/"] .section-head h2{font-size:15px;font-weight:650;letter-spacing:.02em}
-body[data-chemex-page="/"] .card{border:1px solid var(--cx-line);border-radius:var(--cx-radius);background:var(--cx-surface);padding:23px 25px;box-shadow:var(--cx-shadow);min-height:112px;transition:background .16s,border-color .16s,transform .16s}
-body[data-chemex-page="/"] .card:hover{background:var(--cx-raised);border-color:#9bb5ee;transform:translateY(-2px)}
-body[data-chemex-page="/"] .icon{height:44px;width:44px;flex-basis:44px;padding:7px;border-radius:12px;background:var(--cx-hover);color:var(--cx-accent)}
-body[data-chemex-page="/"] .copy h3{font-size:17px;font-weight:600}
-body[data-chemex-page="/"] .copy p{font-size:12px;color:var(--cx-muted)}
-body[data-chemex-page="/"] .arrow{color:var(--cx-accent)}
-body[data-chemex-page="/"] :is(footer,.account){border-color:var(--cx-line);color:var(--cx-muted)}
+body[data-chemex-page="/"] .entrance{background:transparent;border:0;box-shadow:none}
 /* Film browsing and player chrome */
 body[data-chemex-page^="/miying/"] :is(.top,footer,.film-info,.notice,.line-panel){border-color:var(--cx-line)}
 body[data-chemex-page^="/miying/"] .top{background:var(--cx-surface)}
@@ -65,6 +52,7 @@ body[data-chemex-page^="/epubreader/"] .book-delete{background:var(--cx-surface)
 body[data-chemex-page^="/epubreader/"] :is(.panel,.reader-header,.reader-footer){border-color:var(--cx-line)}
 body[data-chemex-page^="/epubreader/"] .theme-options [data-theme="paper"]{background:#f4f6fa;color:#1e293b}
 body[data-chemex-page^="/epubreader/"] .theme-options [data-theme="sepia"]{background:#e9eef5;color:#1e293b}
+body[data-chemex-page^="/epubreader/"] .theme-options [data-theme="cream"]{background:#f2e8d5;color:#4d402d}
 body[data-chemex-page^="/epubreader/"] .theme-options [data-theme="dark"]{background:#111827;color:#e7edf7}
 /* Domain login / account pages */
 body[data-chemex-page^="/auth/"] main{background:var(--cx-surface);padding:32px;border:1px solid var(--cx-line);border-radius:20px;box-shadow:var(--cx-shadow);max-width:410px}
@@ -75,5 +63,4 @@ body[data-chemex-page^="/auth/"] button:hover{background:#2754b7}
 body[data-chemex-page^="/auth/"] :is(a,.secondary){color:var(--cx-accent)}
 body[data-chemex-page^="/auth/"] .secondary{background:transparent;border-color:var(--cx-line)}
 body[data-chemex-page^="/auth/"] footer{border-color:var(--cx-line)}
-@media(max-width:620px){body[data-chemex-page="/"] header{height:70px}body[data-chemex-page="/"] main{padding-top:24px}body[data-chemex-page="/"] .card{min-height:96px;padding:19px;gap:15px}body[data-chemex-page="/"] .copy p{font-size:11px}body[data-chemex-page^="/auth/"] main{padding:25px;max-width:370px}}
-@media(prefers-reduced-motion:reduce){body[data-chemex-page="/"] .card{transition:none;transform:none}}
+@media(max-width:620px){body[data-chemex-page^="/auth/"] main{padding:25px;max-width:370px}}

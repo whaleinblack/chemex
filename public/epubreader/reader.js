@@ -422,7 +422,7 @@
         el.style.setProperty('margin-block-end',`${settings.font*.75}px`,'important');
       }
     }
-    const palettes={paper:['#f4f6fa','#1e293b'],sepia:['#e9eef5','#1e293b'],dark:['#111827','#e7edf7']};
+    const palettes={paper:['#f4f6fa','#1e293b'],sepia:['#e9eef5','#1e293b'],cream:['#f2e8d5','#4d402d'],dark:['#111827','#e7edf7']};
     const [bg,fg]=palettes[settings.theme];
     contents.addStylesheetCss(`html{font-size:${settings.font}px!important} html,body{background:${bg}!important;color:${fg}!important} img,svg{max-width:100%!important;object-fit:contain} ${settings.theme==='dark'?'body *:not(img):not(svg):not(svg *){color:inherit!important;background-color:transparent!important}':''}`,'chemex-reader-style');
   }
@@ -490,7 +490,7 @@
     if(name==='notes')renderNotes();
   }
   function renderSettings() {
-    $('#panel-body').innerHTML=`<p class="panel-description">设置仅保存在当前书籍。普通正文使用统一字号、行距和段间距；标题与注音按层级显示。</p><div class="setting"><label>字号（正文大小）</label><div class="font-control"><button data-font="-1" aria-label="减小字号">A−</button><output id="font-value">${settings.font} px</output><button data-font="1" aria-label="增大字号">A＋</button></div></div><div class="setting"><label for="line-spacing">行距（倍数） <output id="line-value">${settings.line.toFixed(1)}</output></label><input id="line-spacing" type="range" min="1.3" max="2.5" step="0.1" value="${settings.line}"></div><div class="setting"><label>纸张主题</label><div class="theme-options">${[['paper','纸白'],['sepia','浅灰'],['dark','深夜']].map(([k,v])=>`<button data-theme="${k}" aria-pressed="${settings.theme===k}">${v}</button>`).join('')}</div></div><div class="setting"><label class="setting-toggle" for="wheel-enabled">鼠标滚轮翻页<input id="wheel-enabled" type="checkbox" ${settings.wheel?'checked':''}></label><p class="panel-description">分页模式下，向下翻下一页，向上翻上一页。保留 Ctrl + 滚轮缩放。</p></div><div class="setting"><label>键盘操作</label><p class="panel-description">← / →：翻页<br>Page Up / Page Down：翻页<br>空格 / Shift + 空格：下一页 / 上一页<br>Esc：关闭面板或退出专注模式</p></div>`;
+    $('#panel-body').innerHTML=`<p class="panel-description">设置仅保存在当前书籍。普通正文使用统一字号、行距和段间距；标题与注音按层级显示。</p><div class="setting"><label>字号（正文大小）</label><div class="font-control"><button data-font="-1" aria-label="减小字号">A−</button><output id="font-value">${settings.font} px</output><button data-font="1" aria-label="增大字号">A＋</button></div></div><div class="setting"><label for="line-spacing">行距（倍数） <output id="line-value">${settings.line.toFixed(1)}</output></label><input id="line-spacing" type="range" min="1.3" max="2.5" step="0.1" value="${settings.line}"></div><div class="setting"><label>纸张主题</label><div class="theme-options">${[['paper','纸白'],['sepia','浅灰'],['cream','米黄'],['dark','深夜']].map(([k,v])=>`<button data-theme="${k}" aria-pressed="${settings.theme===k}">${v}</button>`).join('')}</div></div><div class="setting"><label class="setting-toggle" for="wheel-enabled">鼠标滚轮翻页<input id="wheel-enabled" type="checkbox" ${settings.wheel?'checked':''}></label><p class="panel-description">分页模式下，向下翻下一页，向上翻上一页。保留 Ctrl + 滚轮缩放。</p></div><div class="setting"><label>键盘操作</label><p class="panel-description">← / →：翻页<br>Page Up / Page Down：翻页<br>空格 / Shift + 空格：下一页 / 上一页<br>Esc：关闭面板或退出专注模式</p></div>`;
     if(current?.layout==='pre-paginated'){
       $('#panel-body').insertAdjacentHTML('afterbegin','<p class="panel-description">这是固定版式／图片书。保留原图和页面尺寸，字号、行距不适用于图片中的文字。</p>');
       $$('#panel-body [data-font],#line-spacing').forEach(el=>el.disabled=true);

@@ -310,3 +310,6 @@ A separate /epubreader/ tool now provides browser-local EPUB reading with wheel 
 ## Unified visual theme (2026-10-20)
 
 Home, film, EPUB and owner-account pages align with the existing cool white / blue-gray COF and Survival visual language; COF/research and Survival receive no changes. Light and dark variants use the same tokens, typography, borders and controls. See [Shared theme](THEME.md) for scope, deployment and rollback.
+
+
+Homepage entrances now use owner-provided transparent illustrations without cards; Survival uses the sleeping-on-pillow image. EPUB adds a per-book 米黄 option while the homepage remains blue-gray. COF and Survival app sources/styles stay untouched. See `PERSONAL_HOME.md` and `EPUB_READER.md`.

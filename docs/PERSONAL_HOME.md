@@ -2,7 +2,7 @@
 
 The root `https://chemex.space/` is the owner's personal portal. `tools/home/` contains its buildless HTML/CSS, local Rajdhani font and license, and original SVG/CSS artwork. The page makes no requests to external APIs and has no analytics dependency. Its account gate is implemented by the separate owner-auth service.
 
-The compact revision removes the introductory hero, descriptive section prose and large artwork. All four tool entries fit in a normal desktop viewport; mobile uses short stacked cards. The header's account link opens `/auth/account` for logout/device revocation. The whole domain is now protected using the existing Survival MX credentials, with a remembered 30-day device session; see `OWNER_AUTH.md`. No new account/password is created.
+The homepage uses four unframed transparent illustration links with short captions. Desktop shows four columns; mobile shows two. The mapping is: computer/work character → COF, glasses/cup/laptop → Miying, sleeping character on pillow → Survival, reading character/book/lamp → EPUB. No card background or entry borders are used. The header's account link opens `/auth/account` for logout/device revocation. The whole domain is now protected using the existing Survival MX credentials, with a remembered 30-day device session; see `OWNER_AUTH.md`. No new account/password is created.
 
 ## Navigation
 
@@ -17,7 +17,7 @@ The root is a navigation page; each existing application keeps its own state, se
 
 ## Deploy without replacing live scientific changes
 
-Commit and push first. Tar exactly `index.html`, `style.css`, `favicon.svg`, `favicon.png`, `favicon.ico`, `apple-touch-icon.png`, `rajdhani-600.woff2` and `FONT-LICENSE` from `tools/home/`. Upload this archive with `scripts/deploy-home.py`, and run `sudo python3 deploy-home.py <full-commit> <tar>`.
+Commit and push first. Tar exactly `index.html`, `style.css`, `favicon.svg`, `favicon.png`, `favicon.ico`, `apple-touch-icon.png`, `rajdhani-600.woff2`, `FONT-LICENSE`, and the four `entrances/*.png` files from `tools/home/`. Upload this archive with `scripts/deploy-home.py`, and run `sudo python3 deploy-home.py <full-commit> <tar>`.
 
 The helper installs `/srv/chemex/home/releases/<commit>`, with home assets under `assets/`, and copies the **current server's** `/srv/chemex/app/dist` into that release's `research/` directory. This snapshot stays on the server; do not commit independent live modifications or private runtime fonts. The original server checkout, backend, calculation data and app services are not overwritten/restarted. On later research frontend changes, refresh the research snapshot through a new home release after verifying the changed workbench.
 
@@ -32,3 +32,5 @@ Verify root title and all four tool links, desktop/mobile layout, the research J
 The owner-provided avatar is the site icon. `tools/home/favicon.png` is the reusable 512px transparent asset; SVG (embedded PNG), ICO and Apple touch variants retain alpha. The white face stays filled and only the exterior background is transparent. The homepage uses versioned icon URLs to avoid the old C mark being reused from browser cache. The shared root icon routes and an exact icon-only allowlist resolve to current home assets without authentication so Safari can fetch them independently; all other assets and pages retain the owner gate. Login/account pages declare the same icons. See `OWNER_AUTH.md` for the complete public icon allowlist.
 
 The master was prepared with the built-in imagegen tool using: “Remove only the exterior white background to actual transparent alpha; preserve the white face and ear interiors, eye highlights, expression, black contours and pink cheeks; center the complete head on a square canvas.” Native macOS sips exports the delivery sizes without flattening alpha.
+
+The entrance images were extracted from owner-provided illustrations using built-in imagegen. Only exterior backgrounds are transparent; white character bodies and props remain filled. See `tools/home/entrances/ARTWORK.json` for the per-image prompts and mapping.

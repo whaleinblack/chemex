@@ -58,3 +58,7 @@ Back up `/etc/nginx/sites-available/chemex-space.conf`, validate `nginx -t`, and
 ## Verification
 
 Browser QA covers example import, wheel navigation in both directions, bookmarks, whole-book search and navigation to results, saved notes, return to shelf, refresh and reading-position restoration. Production smoke checks include `/`, `/api/health`, `/epubreader`, the reader HTML and all vendored assets. Live wheel navigation must be checked after publication.
+
+## Optional cream paper
+
+Paper choices are 纸白 (`paper`), 浅灰 (`sepia`), 米黄 (`cream`) and 深夜 (`dark`). Cream colors the reading surface and EPUB content, and is persisted per book using the existing preference store. It does not change the default, other books, or the homepage. `deploy-reader-cream.py` patches only the palette/choice list and preference allowlist on a copied live release; existing server repairs and other files remain byte-identical.

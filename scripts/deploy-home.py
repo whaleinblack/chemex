@@ -95,13 +95,14 @@ def main():
         replacement=original.replace(anchor,stanza+anchor,1)
     release=base/'releases'/commit
     release.mkdir(parents=True,exist_ok=False)
-    allowed={'index.html','style.css','favicon.svg','favicon.png','favicon.ico','apple-touch-icon.png','rajdhani-600.woff2','FONT-LICENSE'}
+    allowed={'index.html','style.css','favicon.svg','favicon.png','favicon.ico','apple-touch-icon.png','rajdhani-600.woff2','FONT-LICENSE','entrances/cof.png','entrances/miying.png','entrances/survival.png','entrances/epubreader.png'}
     (release/'assets').mkdir()
     with tarfile.open(archive_path) as archive:
         for member in archive.getmembers():
             name=member.name.removeprefix('./')
             if name not in allowed or not member.isfile(): raise ValueError('Unexpected archive member')
             target=release/name if name=='index.html' else release/'assets'/name
+            target.parent.mkdir(parents=True,exist_ok=True)
             with archive.extractfile(member) as src,target.open('wb') as dest: shutil.copyfileobj(src,dest)
     for name in allowed:
         target=release/name if name=='index.html' else release/'assets'/name

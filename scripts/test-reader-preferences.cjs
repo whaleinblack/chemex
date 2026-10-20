@@ -45,3 +45,13 @@ test('invalid stored values cannot escape supported ranges',()=>{
   assert.equal(rules.normalize({font:100,line:0}).line,1.3);
   assert.equal(rules.normalize({font:'bad',line:Infinity,theme:'bad'}).font,21);
 });
+
+test('optional cream paper persists per book without changing the default or other books',()=>{
+  const a={id:'a'},b={id:'b'};
+  rules.saveBook(a,{font:22,theme:'cream'});
+  rules.saveBook(b,{font:18,theme:'sepia'});
+  const restored=JSON.parse(JSON.stringify([a,b]));
+  assert.equal(rules.normalize(restored[0].preferences).theme,'cream');
+  assert.equal(rules.normalize(restored[1].preferences).theme,'sepia');
+  assert.equal(rules.normalize().theme,'paper');
+});
