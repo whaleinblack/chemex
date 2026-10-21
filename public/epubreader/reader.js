@@ -17,6 +17,9 @@
   for (const name of ['back','bookmark','focus','previous','next']) $(`#${name}`).innerHTML = icon(name);
   for (const name of ['contents','search','notes']) $(`.reader-header [data-panel="${name}"]`).innerHTML = icon(name);
   $('#site-theme').innerHTML = icon('moon');
+  const scrollbarStyle=document.createElement('style');
+  scrollbarStyle.textContent='#reader.scrolling-reader #viewer,#reader.scrolling-reader #viewer *{scrollbar-width:none!important}#reader.scrolling-reader #viewer::-webkit-scrollbar,#reader.scrolling-reader #viewer *::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}';
+  document.head.append(scrollbarStyle);
   const escape = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const text = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
   const {defaults:defaultSettings,normalize:normalizeSettings}=ReaderPreferences;
@@ -281,6 +284,7 @@
       toc = flatten((await book.loaded.navigation).toc);
       toc=toc.map(item=>({...item,href:resolveTarget(item.href)}));
       if(!toc.length)toc=book.spine.spineItems.map((s,i)=>({href:s.href,label:`第 ${i+1} 章`,depth:0}));
+      $('#reader').classList.toggle('scrolling-reader',effectiveFlow()==='scrolled-doc');
       rendition = book.renderTo('viewer',{width:'100%',height:'100%',flow:current.layout==='pre-paginated'?'paginated':settings.flow,spread:'none',allowScriptedContent:false,allowPopups:false});
       rendition.hooks.content.register(contents => {
         applyContentStyle(contents);
@@ -478,7 +482,8 @@
     }
     const palettes={paper:['#f4f6fa','#1e293b'],sepia:['#e9eef5','#1e293b'],cream:['#f2e8d5','#4d402d'],dark:['#111827','#e7edf7']};
     const [bg,fg]=palettes[settings.theme];
-    contents.addStylesheetCss(`html{font-size:${settings.font}px!important} html,body{background:${bg}!important;color:${fg}!important} img,svg{max-width:100%!important;object-fit:contain} ${settings.theme==='dark'?'body *:not(img):not(svg):not(svg *){color:inherit!important;background-color:transparent!important}':''}`,'chemex-reader-style');
+    const scrollbarCss=effectiveFlow()==='scrolled-doc'?'html,body{scrollbar-width:none!important}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}':'';
+    contents.addStylesheetCss(`${scrollbarCss}html{font-size:${settings.font}px!important} html,body{background:${bg}!important;color:${fg}!important} img,svg{max-width:100%!important;object-fit:contain} ${settings.theme==='dark'?'body *:not(img):not(svg):not(svg *){color:inherit!important;background-color:transparent!important}':''}`,'chemex-reader-style');
   }
   function applyTheme() {
     document.documentElement.dataset.theme=settings.theme;
@@ -515,6 +520,7 @@
     try{const compare=new ePub.CFI();return compare.compare(cfi,loc.start.cfi)>=0&&compare.compare(cfi,loc.end.cfi)<=0;}catch{return false;}
   }
   function updateModeButtons() {
+    $('#reader').classList.toggle('scrolling-reader',effectiveFlow()==='scrolled-doc');
     const fixed=current?.layout==='pre-paginated';
     for(const [id,flow] of [['page-mode','paginated'],['scroll-mode','scrolled-doc']]) {
       $(`#${id}`).classList.toggle('active',effectiveFlow()===flow); $(`#${id}`).setAttribute('aria-pressed',String(effectiveFlow()===flow));
