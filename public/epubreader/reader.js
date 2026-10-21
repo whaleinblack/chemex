@@ -440,9 +440,9 @@
       if(el.closest('svg,math,script,style'))continue;
       for(const [name,value] of [['writing-mode','horizontal-tb'],['-webkit-writing-mode','horizontal-tb'],['direction','ltr'],['text-orientation','mixed'],['text-combine-upright','none']])el.style.setProperty(name,value,'important');
       if(el.matches('ruby'))el.style.setProperty('ruby-position','over','important');
-      if(el!==doc.documentElement && el!==doc.body && el.matches('div,section,article,main,p,li,blockquote,pre,figure,figcaption,h1,h2,h3,h4,h5,h6,ul,ol,span')) {
-        el.style.setProperty('display',el.matches('span')?'inline':el.matches('li')?'list-item':'block','important');
-        for(const [name,value] of [['width','auto'],['height','auto'],['min-width','0'],['max-width','100%'],['min-height','0'],['max-height','none'],['inline-size','auto'],['block-size','auto'],['min-inline-size','0'],['max-inline-size','100%'],['min-block-size','0'],['max-block-size','none'],['columns','auto'],['position','static'],['float','none'],['overflow','visible'],['white-space','normal'],['overflow-wrap','anywhere'],['box-sizing','border-box'],['break-inside','auto'],['page-break-inside','auto']])el.style.setProperty(name,value,'important');
+      if(el!==doc.documentElement && el!==doc.body && el.matches('div,section,article,main,p,li,blockquote,pre,figure,figcaption,h1,h2,h3,h4,h5,h6,ul,ol,dl,dt,dd,nav,header,footer,span,a')) {
+        el.style.setProperty('display',el.matches('span,a')?'inline':el.matches('li')?'list-item':'block','important');
+        for(const [name,value] of [['text-indent','0'],['margin-inline-start','0'],['margin-inline-end','0'],['padding-inline-start','0'],['padding-inline-end','0'],['margin-left','0'],['margin-right','0'],['padding-left','0'],['padding-right','0'],['width','auto'],['height','auto'],['min-width','0'],['max-width','100%'],['min-height','0'],['max-height','none'],['inline-size','auto'],['block-size','auto'],['min-inline-size','0'],['max-inline-size','100%'],['min-block-size','0'],['max-block-size','none'],['columns','auto'],['position','static'],['float','none'],['overflow','visible'],['white-space','normal'],['overflow-wrap','anywhere'],['box-sizing','border-box'],['break-inside','auto'],['page-break-inside','auto']])el.style.setProperty(name,value,'important');
       }
     }
   }
