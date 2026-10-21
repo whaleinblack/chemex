@@ -56,10 +56,20 @@ test('optional cream paper persists per book without changing the default or oth
   assert.equal(rules.normalize().theme,'paper');
 });
 
-test('horizontal writing persists per book and legacy books retain publisher layout',()=>{
+test('horizontal writing persists per book and generic defaults retain publisher layout',()=>{
   const a={},b={};rules.saveBook(a,{writing:'horizontal'});rules.saveBook(b,{});
   assert.equal(rules.normalize(JSON.parse(JSON.stringify(a.preferences))).writing,'horizontal');
   assert.equal(b.preferences.writing,'original');
   assert.equal(rules.normalize({writing:'vertical'}).writing,'original');
   assert.equal(rules.defaults.writing,'original');
+});
+
+test('Japanese books default to horizontal, including old automatic original values',()=>{
+  for(const language of ['ja','ja-JP','ja_JP','jpn','Japanese','日本語']){
+    assert.equal(rules.forBook({writing:'original'},{language}).writing,'horizontal');
+  }
+  assert.equal(rules.forBook({writing:'original',writingExplicit:true},{language:'ja'}).writing,'original');
+  assert.equal(rules.forBook({}, {language:'en'}).writing,'original');
+  assert.equal(rules.forBook({}, {language:'ja',layout:'pre-paginated'}).writing,'original');
+  assert.equal(rules.forBook({writing:'horizontal',writingExplicit:true},{language:'ja'}).writing,'horizontal');
 });

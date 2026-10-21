@@ -215,7 +215,7 @@
         try{const url=new URL(match[1],new URL(base,'https://epub.invalid/'));if(url.protocol==='data:'||url.protocol==='blob:')resolved=url.href;else if(url.origin===source.origin)resolved=await activeBook.archive.createUrl(url.pathname)+url.hash;}catch{}
         css=css.replace(match[0],`url(${JSON.stringify(resolved)})`);
       }
-      return css.replace(/@charset\s+["'][^"']+["'];/gi,'');
+      return horizontalStylesheet(css.replace(/@charset\s+["'][^"']+["'];/gi,''),doc);
     }
     async function stylesheet(value) {
       const path=new URL(value,source).pathname;
@@ -256,7 +256,7 @@
     opening = true; const token = ++generation;
     loadAbort=new AbortController();savedSelection=null;turning=false;layoutBusy=false;
     lastFocus = document.activeElement;
-    current = record;settings=normalizeSettings(record.preferences||defaultSettings);
+    current = record;settings=ReaderPreferences.forBook(record.preferences||defaultSettings,record);
     document.documentElement.dataset.theme=settings.theme;
     record.marks ||= [];record.notes ||= [];closePanel();
     $('#reader').hidden = false; document.body.style.overflow = 'hidden';
@@ -273,6 +273,8 @@
       if(token!==generation){loaded.destroy();return;}
       book=loaded;
       current.layout=book.packaging.metadata.layout||record.layout||'reflowable';
+      settings=ReaderPreferences.forBook(settings,{language:book.packaging.metadata.language||record.language,layout:current.layout});
+      saveSettings();
       $('#reader').classList.toggle('image-book',current.layout==='pre-paginated');
       if(settings.writing==='horizontal' && current.layout!=='pre-paginated')book.packaging.metadata.direction='ltr';
       book.spine.hooks.content.register((doc,section)=>prepareChapter(doc,section,loaded));
@@ -379,9 +381,20 @@
     finally { turning=false; }
   }
   function onWheel(e) {
-    if(!rendition || opening || activePanel || !settings.wheel || effectiveFlow()!=='paginated' || $('#note-dialog').open) return;
+    if(!rendition || opening || activePanel || $('#note-dialog').open) return;
     if(e.ctrlKey||e.metaKey||e.altKey||e.shiftKey||!e.deltaY||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
-    if(e.target?.closest?.('input,textarea,button,a,select,[contenteditable="true"]'))return;
+    if(e.target?.closest?.('input,textarea,button,select,[contenteditable="true"]'))return;
+    const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?800:1);
+    if(effectiveFlow()==='scrolled-doc'){
+      const viewport=$('#viewer .epub-container');
+      if(!viewport)return;
+      const maximum=viewport.scrollHeight-viewport.clientHeight;
+      if((delta>0 && viewport.scrollTop<maximum-2)||(delta<0 && viewport.scrollTop>2)){
+        if(e.cancelable)e.preventDefault();viewport.scrollTop+=delta;return;
+      }
+      // A wheel at the chapter boundary continues into the adjacent chapter.
+    }
+    if(!settings.wheel)return;
     if(e.cancelable)e.preventDefault();
     const now=performance.now(), direction=Math.sign(e.deltaY);
     if(now-wheelAt>180||direction!==wheelDirection)wheelSum=0;
@@ -400,22 +413,43 @@
     if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();turn(-1);}
   }
   document.addEventListener('keydown',onKey);
-  $('#viewer').addEventListener('wheel',onWheel,{passive:false});
+  $('.reading-area').addEventListener('wheel',onWheel,{passive:false});
   const effectiveFlow=()=>current?.layout==='pre-paginated'?'paginated':settings.flow;
+  const publisherGeometry=['width','height','min-width','max-width','min-height','max-height','inline-size','block-size','min-inline-size','max-inline-size','min-block-size','max-block-size','columns','column-count','column-width','column-gap','column-fill','overflow','overflow-x','overflow-y','position','display','flex-direction','grid-template-columns','transform','inset','top','right','bottom','left','padding','padding-top','padding-right','padding-bottom','padding-left','padding-block','padding-inline','margin','margin-top','margin-right','margin-bottom','margin-left','margin-block','margin-inline'];
+  function horizontalStylesheet(css,doc) {
+    if(settings.writing!=='horizontal' || current?.layout==='pre-paginated')return css;
+    try {
+      const sheet=new CSSStyleSheet();sheet.replaceSync(css);
+      const visit=rules=>{for(const rule of rules){
+        if(rule.selectorText && rule.style){
+          let root=false;try{root=doc.documentElement.matches(rule.selectorText)||doc.body.matches(rule.selectorText);}catch{}
+          if(root)for(const name of publisherGeometry)rule.style.removeProperty(name);
+        }
+        if(rule.cssRules)visit(rule.cssRules);
+      }};
+      visit(sheet.cssRules);return [...sheet.cssRules].map(rule=>rule.cssText).join('\n');
+    }catch{return css;}
+  }
   function applyWritingMode(doc) {
     if(settings.writing!=='horizontal' || current?.layout==='pre-paginated')return;
+    for(const root of [doc.documentElement,doc.body])for(const name of publisherGeometry)root.style.removeProperty(name);
+    for(const style of doc.querySelectorAll('style'))style.textContent=horizontalStylesheet(style.textContent,doc);
     // Override publisher writing modes before epub.js measures the chapter.
     // Inline style attributes do not change text-node CFIs or the stored EPUB.
     for(const el of [doc.documentElement,doc.body,...doc.body.querySelectorAll('*')]) {
       if(el.closest('svg,math,script,style'))continue;
       for(const [name,value] of [['writing-mode','horizontal-tb'],['-webkit-writing-mode','horizontal-tb'],['direction','ltr'],['text-orientation','mixed'],['text-combine-upright','none']])el.style.setProperty(name,value,'important');
       if(el.matches('ruby'))el.style.setProperty('ruby-position','over','important');
+      if(el!==doc.documentElement && el!==doc.body && el.matches('div,section,article,main,p,li,blockquote,pre,figure,figcaption,h1,h2,h3,h4,h5,h6,ul,ol,span')) {
+        el.style.setProperty('display',el.matches('span')?'inline':el.matches('li')?'list-item':'block','important');
+        for(const [name,value] of [['width','auto'],['height','auto'],['min-width','0'],['max-width','100%'],['min-height','0'],['max-height','none'],['inline-size','auto'],['block-size','auto'],['min-inline-size','0'],['max-inline-size','100%'],['min-block-size','0'],['max-block-size','none'],['columns','auto'],['position','static'],['float','none'],['overflow','visible'],['white-space','normal'],['overflow-wrap','anywhere'],['box-sizing','border-box'],['break-inside','auto'],['page-break-inside','auto']])el.style.setProperty(name,value,'important');
+      }
     }
   }
   async function changeWritingMode(writing) {
     if(!current || opening || current.layout==='pre-paginated' || settings.writing===writing)return;
     const record=current;
-    settings.writing=writing;saveSettings();
+    settings.writing=writing;settings.writingExplicit=true;saveSettings();
     // Recreate the renderer so axis, RTL progression and cached chapters agree.
     await openBook(record);
     if(current===record && rendition && !$('#reader').hidden)openPanel('settings');
@@ -486,7 +520,7 @@
       $(`#${id}`).classList.toggle('active',effectiveFlow()===flow); $(`#${id}`).setAttribute('aria-pressed',String(effectiveFlow()===flow));
     }
     $('#scroll-mode').disabled=fixed;
-    $('#wheel-hint').textContent=fixed?'固定版式 · 保留原始页面':effectiveFlow()==='paginated'?(settings.wheel?'↕ 滚轮翻页':'滚轮翻页已关闭'):'↕ 章节内连续滚动';
+    $('#wheel-hint').textContent=fixed?'固定版式 · 保留原始页面':effectiveFlow()==='paginated'?(settings.wheel?'↕ 滚轮翻页':'滚轮翻页已关闭'):'↕ 连续滚动 · 章末继续翻章';
   }
   async function changeFlow(flow) {if(current?.layout==='pre-paginated')return;const anchor=current?.cfi;settings.flow=flow;saveSettings();updateModeButtons();if(rendition){rendition.flow(flow);await navigate(anchor);} }
   function setFocus(value) {focusMode=value;$('#reader').classList.toggle('focus-mode',value);$('#exit-focus').hidden=!value;$('#focus').setAttribute('aria-label',value?'退出专注模式':'进入专注模式');if(rendition)requestAnimationFrame(()=>rendition.resize());}
