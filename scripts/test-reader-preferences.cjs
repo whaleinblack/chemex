@@ -55,3 +55,11 @@ test('optional cream paper persists per book without changing the default or oth
   assert.equal(rules.normalize(restored[1].preferences).theme,'sepia');
   assert.equal(rules.normalize().theme,'paper');
 });
+
+test('horizontal writing persists per book and legacy books retain publisher layout',()=>{
+  const a={},b={};rules.saveBook(a,{writing:'horizontal'});rules.saveBook(b,{});
+  assert.equal(rules.normalize(JSON.parse(JSON.stringify(a.preferences))).writing,'horizontal');
+  assert.equal(b.preferences.writing,'original');
+  assert.equal(rules.normalize({writing:'vertical'}).writing,'original');
+  assert.equal(rules.defaults.writing,'original');
+});

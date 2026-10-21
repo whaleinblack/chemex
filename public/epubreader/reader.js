@@ -240,6 +240,7 @@
       if(element.tagName.toLowerCase()==='img')element.setAttribute('loading','eager');
     }
     await Promise.all(work);
+    applyWritingMode(doc);
   }
   function flatten(items,depth=0) { return (items||[]).flatMap(x=>[{...x,depth},...flatten(x.subitems,depth+1)]); }
   function resolveTarget(href,base) {
@@ -273,6 +274,7 @@
       book=loaded;
       current.layout=book.packaging.metadata.layout||record.layout||'reflowable';
       $('#reader').classList.toggle('image-book',current.layout==='pre-paginated');
+      if(settings.writing==='horizontal' && current.layout!=='pre-paginated')book.packaging.metadata.direction='ltr';
       book.spine.hooks.content.register((doc,section)=>prepareChapter(doc,section,loaded));
       toc = flatten((await book.loaded.navigation).toc);
       toc=toc.map(item=>({...item,href:resolveTarget(item.href)}));
@@ -400,6 +402,24 @@
   document.addEventListener('keydown',onKey);
   $('#viewer').addEventListener('wheel',onWheel,{passive:false});
   const effectiveFlow=()=>current?.layout==='pre-paginated'?'paginated':settings.flow;
+  function applyWritingMode(doc) {
+    if(settings.writing!=='horizontal' || current?.layout==='pre-paginated')return;
+    // Override publisher writing modes before epub.js measures the chapter.
+    // Inline style attributes do not change text-node CFIs or the stored EPUB.
+    for(const el of [doc.documentElement,doc.body,...doc.body.querySelectorAll('*')]) {
+      if(el.closest('svg,math,script,style'))continue;
+      for(const [name,value] of [['writing-mode','horizontal-tb'],['-webkit-writing-mode','horizontal-tb'],['direction','ltr'],['text-orientation','mixed'],['text-combine-upright','none']])el.style.setProperty(name,value,'important');
+      if(el.matches('ruby'))el.style.setProperty('ruby-position','over','important');
+    }
+  }
+  async function changeWritingMode(writing) {
+    if(!current || opening || current.layout==='pre-paginated' || settings.writing===writing)return;
+    const record=current;
+    settings.writing=writing;saveSettings();
+    // Recreate the renderer so axis, RTL progression and cached chapters agree.
+    await openBook(record);
+    if(current===record && rendition && !$('#reader').hidden)openPanel('settings');
+  }
   function applyContentStyle(contents) {
     if(current?.layout==='pre-paginated')return;
     const doc=contents.document;
@@ -490,7 +510,7 @@
     if(name==='notes')renderNotes();
   }
   function renderSettings() {
-    $('#panel-body').innerHTML=`<p class="panel-description">设置仅保存在当前书籍。普通正文使用统一字号、行距和段间距；标题与注音按层级显示。</p><div class="setting"><label>字号（正文大小）</label><div class="font-control"><button data-font="-1" aria-label="减小字号">A−</button><output id="font-value">${settings.font} px</output><button data-font="1" aria-label="增大字号">A＋</button></div></div><div class="setting"><label for="line-spacing">行距（倍数） <output id="line-value">${settings.line.toFixed(1)}</output></label><input id="line-spacing" type="range" min="1.3" max="2.5" step="0.1" value="${settings.line}"></div><div class="setting"><label>纸张主题</label><div class="theme-options">${[['paper','纸白'],['sepia','浅灰'],['cream','米黄'],['dark','深夜']].map(([k,v])=>`<button data-theme="${k}" aria-pressed="${settings.theme===k}">${v}</button>`).join('')}</div></div><div class="setting"><label class="setting-toggle" for="wheel-enabled">鼠标滚轮翻页<input id="wheel-enabled" type="checkbox" ${settings.wheel?'checked':''}></label><p class="panel-description">分页模式下，向下翻下一页，向上翻上一页。保留 Ctrl + 滚轮缩放。</p></div><div class="setting"><label>键盘操作</label><p class="panel-description">← / →：翻页<br>Page Up / Page Down：翻页<br>空格 / Shift + 空格：下一页 / 上一页<br>Esc：关闭面板或退出专注模式</p></div>`;
+    $('#panel-body').innerHTML=`<p class="panel-description">设置仅保存在当前书籍。普通正文使用统一字号、行距和段间距；标题与注音按层级显示。</p><div class="setting"><label>字号（正文大小）</label><div class="font-control"><button data-font="-1" aria-label="减小字号">A−</button><output id="font-value">${settings.font} px</output><button data-font="1" aria-label="增大字号">A＋</button></div></div><div class="setting"><label for="line-spacing">行距（倍数） <output id="line-value">${settings.line.toFixed(1)}</output></label><input id="line-spacing" type="range" min="1.3" max="2.5" step="0.1" value="${settings.line}"></div><div class="setting"><label>文字排列</label><div class="theme-options writing-options">${[['original','原书排版'],['horizontal','横排']].map(([k,v])=>`<button data-writing="${k}" aria-pressed="${settings.writing===k}" ${current?.layout==='pre-paginated'?'disabled':''}>${v}</button>`).join('')}</div><p class="panel-description">${current?.layout==='pre-paginated'?'固定版式书籍保留原始页面，不转换文字排列。':'横排将竖排日文改为从左到右、从上到下阅读；可随时恢复原书排版。'}</p></div><div class="setting"><label>纸张主题</label><div class="theme-options">${[['paper','纸白'],['sepia','浅灰'],['cream','米黄'],['dark','深夜']].map(([k,v])=>`<button data-theme="${k}" aria-pressed="${settings.theme===k}">${v}</button>`).join('')}</div></div><div class="setting"><label class="setting-toggle" for="wheel-enabled">鼠标滚轮翻页<input id="wheel-enabled" type="checkbox" ${settings.wheel?'checked':''}></label><p class="panel-description">分页模式下，向下翻下一页，向上翻上一页。保留 Ctrl + 滚轮缩放。</p></div><div class="setting"><label>键盘操作</label><p class="panel-description">← / →：翻页<br>Page Up / Page Down：翻页<br>空格 / Shift + 空格：下一页 / 上一页<br>Esc：关闭面板或退出专注模式</p></div>`;
     if(current?.layout==='pre-paginated'){
       $('#panel-body').insertAdjacentHTML('afterbegin','<p class="panel-description">这是固定版式／图片书。保留原图和页面尺寸，字号、行距不适用于图片中的文字。</p>');
       $$('#panel-body [data-font],#line-spacing').forEach(el=>el.disabled=true);
@@ -555,6 +575,7 @@
     if(target.dataset.chapter!==undefined){const href=toc[Number(target.dataset.chapter)]?.href;if(href){closePanel();await navigate(href);}return;}
     if(target.dataset.location){const cfi=target.dataset.location;closePanel();await navigate(cfi);return;}
     if(target.dataset.font){settings.font=Math.max(14,Math.min(36,settings.font+Number(target.dataset.font)));$('#font-value').textContent=`${settings.font} px`;refreshLayout();return;}
+    if(target.dataset.writing){await changeWritingMode(target.dataset.writing);return;}
     if(target.dataset.theme){settings.theme=target.dataset.theme;applyTheme();renderSettings();return;}
     if(target.dataset.removeMark){current.marks=current.marks.filter(m=>m.id!==target.dataset.removeMark);persist();renderNotes();relocated(rendition.currentLocation());return;}
     if(target.dataset.removeNote){const note=current.notes.find(n=>n.id===target.dataset.removeNote);if(note)rendition.annotations.remove(note.cfi,'highlight');current.notes=current.notes.filter(n=>n.id!==target.dataset.removeNote);persist();renderNotes();return;}
