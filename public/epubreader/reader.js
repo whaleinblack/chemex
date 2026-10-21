@@ -29,7 +29,7 @@
   let settings={...librarySettings};
   document.documentElement.dataset.theme = settings.theme;
   let db, libraryReady, records = [], current, book, rendition, toc = [], filter = 'all', manage = false;
-  let activePanel = '', savedSelection, focusMode = false, opening = false, turning = false;
+  let activePanel = '', focusMode = false, opening = false, turning = false;
   let turnAt = -Infinity, wheelAt = -Infinity, wheelSum = 0, wheelDirection = 0;
   let searchVersion = 0, saveTimer, toastTimer, generation = 0, lastFocus;
   let loadAbort, layoutBusy=false, layoutVersion=0, layoutTimer;
@@ -168,7 +168,7 @@
         if (/EncryptedData/i.test(enc) && !/embedding|obfuscat/i.test(enc)) throw new Error('DRM');
       }
       const meta=await packageMetadata(zip);
-      const record = {id,data,...meta,title:meta.title||file.name.replace(/\.epub$/i,''),author:meta.author||'未知作者',preferences:{...librarySettings},updated:Date.now(),progress:0,cfi:'',chapter:'',marks:[],notes:[],color:records.length % colors.length};
+      const record = {id,data,...meta,title:meta.title||file.name.replace(/\.epub$/i,''),author:meta.author||'未知作者',preferences:{...librarySettings},updated:Date.now(),progress:0,cfi:'',chapter:'',marks:[],color:records.length % colors.length};
       records.push(record);
       try { await operation('readwrite',s=>s.put({id,data}),'files'); } catch { storageWarning(); }
       await persist(record); renderLibrary();
@@ -257,11 +257,11 @@
   async function openBook(record) {
     if (opening || !record) return;
     opening = true; const token = ++generation;
-    loadAbort=new AbortController();savedSelection=null;turning=false;layoutBusy=false;
+    loadAbort=new AbortController();turning=false;layoutBusy=false;
     lastFocus = document.activeElement;
     current = record;settings=ReaderPreferences.forBook(record.preferences||defaultSettings,record);
     document.documentElement.dataset.theme=settings.theme;
-    record.marks ||= [];record.notes ||= [];closePanel();
+    record.marks ||= [];closePanel();
     $('#reader').hidden = false; document.body.style.overflow = 'hidden';
     $('#book-loading').hidden = false;$('#book-loading').textContent='正在准备书籍和图片…（可点左上角返回取消）';
     $$('.reader-header button:not(#back)').forEach(button=>button.disabled=true);
@@ -300,22 +300,14 @@
             event.preventDefault();event.stopImmediatePropagation();
             navigate(resolveTarget(href,book.spine.get(contents.sectionIndex)?.url));
           },true);
-          doc.addEventListener('pointerdown',()=>{$('#selection-tools').hidden=true;});
           let touch;
           doc.addEventListener('touchstart',e=>{if(e.touches.length===1)touch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
           doc.addEventListener('touchend',e=>{if(!touch||!e.changedTouches.length)return;const dx=e.changedTouches[0].clientX-touch.x,dy=e.changedTouches[0].clientY-touch.y;touch=null;if(effectiveFlow()==='paginated'&&Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5)turn(dx<0?1:-1);},{passive:true});
         }
       });
-      rendition.on('selected',(cfi,contents)=>{
-        const selection = contents.window.getSelection();
-        const quote = text(selection?.toString());
-        if (!quote) return;
-        savedSelection = {cfi,quote}; $('#selection-tools').hidden=false;
-      });
       rendition.on('relocated',location=>{ if(token===generation)relocated(location); });
       applyTheme();
       try{await safeDisplay(record.cfi || undefined);}catch(error){if(!record.cfi)throw error;await safeDisplay();}
-      for (const note of record.notes) addAnnotation(note);
       if(token!==generation)return;
       $('#book-loading').hidden=true; opening=false;
       $$('.reader-header button:not(#back)').forEach(button=>button.disabled=false);
@@ -362,12 +354,11 @@
     const marked=current.marks.some(m=>bookmarkOnPage(m.cfi,loc));
     $('#bookmark').setAttribute('aria-pressed',String(marked));
     $('#bookmark').setAttribute('aria-label',marked?'移除书签':'添加书签');
-    $('#selection-tools').hidden=true;
     clearTimeout(saveTimer); const record=current; saveTimer=setTimeout(()=>persist(record),400);
   }
   function closeReader() {
     ++generation; ++searchVersion; clearTimeout(saveTimer);
-    loadAbort?.abort();opening=false;layoutBusy=false;++layoutVersion;clearTimeout(layoutTimer);turning=false;savedSelection=null;
+    loadAbort?.abort();opening=false;layoutBusy=false;++layoutVersion;clearTimeout(layoutTimer);turning=false;
     persist();
     rendition?.destroy(); book?.destroy(); rendition=null;book=null;
     $('#reader').hidden=true; $('#viewer').replaceChildren();
@@ -385,7 +376,7 @@
     finally { turning=false; }
   }
   function onWheel(e) {
-    if(!rendition || opening || activePanel || $('#note-dialog').open) return;
+    if(!rendition || opening || activePanel) return;
     if(e.ctrlKey||e.metaKey||e.altKey||e.shiftKey||!e.deltaY||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
     if(e.target?.closest?.('input,textarea,button,select,[contenteditable="true"]'))return;
     const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?800:1);
@@ -409,7 +400,7 @@
     wheelSum=0;turnAt=now;turn(direction);
   }
   function onKey(e) {
-    if($('#reader').hidden || e.ctrlKey || e.metaKey || e.altKey || $('#note-dialog').open) return;
+    if($('#reader').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
     if(e.target?.closest?.('input,textarea,select,button,a,[contenteditable="true"]') && e.key!=='Escape') return;
     if(e.key==='Escape'){if(activePanel)closePanel();else if(focusMode)setFocus(false);else closeReader();return;}
     if(activePanel)return;
@@ -533,11 +524,11 @@
   function closePanel() { activePanel=''; ++searchVersion;$('#panel').hidden=true;$$('.reader-header [data-panel]').forEach(b=>b.classList.remove('active')); }
   function openPanel(name) {
     if(activePanel===name){closePanel();return;}
-    activePanel=name;++searchVersion;$('#selection-tools').hidden=true;
+    activePanel=name;++searchVersion;
     $('#panel').dataset.side=name==='settings'?'right':'left';
     $('#panel').hidden=false;
     $$('.reader-header [data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));
-    $('#panel-title').textContent={contents:'目录',search:'搜索书内文字',settings:'阅读设置',notes:'书签与笔记'}[name];
+    $('#panel-title').textContent={contents:'目录',search:'搜索书内文字',settings:'阅读设置',notes:'书签'}[name];
     const body=$('#panel-body');
     if(name==='contents') {
       body.innerHTML='<div class="toc-list">'+(toc.length?toc.map((x,i)=>`<button data-chapter="${i}" style="padding-left:${12+x.depth*14}px" class="${text(x.label)===current.chapter?'active':''}">${escape(text(x.label))}</button>`).join(''):'<p class="panel-description">这本书没有目录。请用翻页按钮阅读。</p>')+'</div>';
@@ -547,7 +538,7 @@
       $('#search-query').focus();$('#book-search').addEventListener('submit',searchBook);
     }
     if(name==='settings')renderSettings();
-    if(name==='notes')renderNotes();
+    if(name==='notes')renderBookmarks();
   }
   function renderSettings() {
     $('#panel-body').innerHTML=`<p class="panel-description">设置仅保存在当前书籍。普通正文使用统一字号、行距和段间距；标题与注音按层级显示。</p><div class="setting"><label>字号（正文大小）</label><div class="font-control"><button data-font="-1" aria-label="减小字号">A−</button><output id="font-value">${settings.font} px</output><button data-font="1" aria-label="增大字号">A＋</button></div></div><div class="setting"><label for="line-spacing">行距（倍数） <output id="line-value">${settings.line.toFixed(1)}</output></label><input id="line-spacing" type="range" min="1.3" max="2.5" step="0.1" value="${settings.line}"></div><div class="setting"><label>文字排列</label><div class="theme-options writing-options">${[['original','原书排版'],['horizontal','横排']].map(([k,v])=>`<button data-writing="${k}" aria-pressed="${settings.writing===k}" ${current?.layout==='pre-paginated'?'disabled':''}>${v}</button>`).join('')}</div><p class="panel-description">${current?.layout==='pre-paginated'?'固定版式书籍保留原始页面，不转换文字排列。':'横排将竖排日文改为从左到右、从上到下阅读；可随时恢复原书排版。'}</p></div><div class="setting"><label>纸张主题</label><div class="theme-options">${[['paper','纸白'],['sepia','浅灰'],['cream','米黄'],['dark','深夜']].map(([k,v])=>`<button data-theme="${k}" aria-pressed="${settings.theme===k}">${v}</button>`).join('')}</div></div><div class="setting"><label class="setting-toggle" for="wheel-enabled">鼠标滚轮翻页<input id="wheel-enabled" type="checkbox" ${settings.wheel?'checked':''}></label><p class="panel-description">分页模式下，向下翻下一页，向上翻上一页。保留 Ctrl + 滚轮缩放。</p></div><div class="setting"><label>键盘操作</label><p class="panel-description">← / →：翻页<br>Page Up / Page Down：翻页<br>空格 / Shift + 空格：下一页 / 上一页<br>Esc：关闭面板或退出专注模式</p></div>`;
@@ -579,26 +570,10 @@
     if(!current?.cfi)return;
     const i=current.marks.findIndex(m=>bookmarkOnPage(m.cfi,rendition.currentLocation()));
     if(i>=0){current.marks.splice(i,1);toast('已移除书签');}else{current.marks.push({id:crypto.randomUUID(),cfi:current.cfi,label:current.chapter,progress:current.progress,date:Date.now()});toast('已添加书签');}
-    persist(); relocated(rendition.currentLocation()); if(activePanel==='notes')renderNotes();
+    persist(); relocated(rendition.currentLocation()); if(activePanel==='notes')renderBookmarks();
   }
-  function addAnnotation(note) {
-    try { rendition.annotations.highlight(note.cfi,{},()=>{openPanel('notes');},'reader-highlight',{'fill':'#d6ae52','fill-opacity':'.28','mix-blend-mode':'multiply'}); } catch {}
-  }
-  function saveSelection(content='') {
-    if(!savedSelection||!current)return;
-    const note={id:crypto.randomUUID(),cfi:savedSelection.cfi,quote:savedSelection.quote,content,date:Date.now()};
-    const existing=current.notes.find(n=>n.cfi===note.cfi);
-    if(existing){existing.content=content||existing.content;persist();$('#selection-tools').hidden=true;if(activePanel==='notes')renderNotes();toast('已更新笔记');return;}
-    current.notes.push(note);addAnnotation(note);persist();$('#selection-tools').hidden=true;if(activePanel==='notes')renderNotes();toast(content?'笔记已保存':'文字已标记');
-  }
-  function renderNotes() {
-    $('#panel-body').innerHTML=`<div class="note-tabs"><button id="new-page-note">＋ 当前页笔记</button><button id="export-notes">导出笔记</button></div><p class="panel-description">${current.marks.length} 个书签 · ${current.notes.length} 条笔记与标记。选中文字可添加荧光标记或笔记。</p><h3 style="font-size:13px">书签</h3>${current.marks.map(m=>`<article class="note-card"><button class="text-button" data-location="${escape(m.cfi)}">${escape(m.label)} · ${Math.round((m.progress||0)*100)}%</button><footer><span></span><button data-remove-mark="${m.id}">移除</button></footer></article>`).join('')||'<p class="panel-description">还没有书签。</p>'}<h3 style="font-size:13px;margin-top:22px">笔记与标记</h3>${current.notes.map(n=>`<article class="note-card"><button class="text-button" data-location="${escape(n.cfi)}"><div class="quote">${escape(n.quote)}</div></button>${n.content?`<p>${escape(n.content)}</p>`:''}<footer><small class="subtle">${new Date(n.date).toLocaleDateString()}</small><button data-remove-note="${n.id}">移除</button></footer></article>`).join('')||'<p class="panel-description">还没有笔记。选中文字，记录你的想法。</p>'}`;
-  }
-  function noteDialog() {if(!savedSelection)return;$('#note-quote').textContent=savedSelection.quote;$('#note-text').value='';$('#note-dialog').showModal();$('#note-text').focus();}
-  function exportNotes() {
-    const data=`# ${current.title}\n\n${current.author}\n\n`+current.notes.map(n=>`> ${n.quote}\n\n${n.content||'（荧光标记）'}\n\n${new Date(n.date).toLocaleString()}\n\n---\n`).join('\n');
-    const url=URL.createObjectURL(new Blob([data],{type:'text/markdown;charset=utf-8'}));
-    const a=document.createElement('a');a.href=url;a.download=`${current.title.replace(/[\\/:*?"<>|]/g,'_')}-笔记.md`;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
+  function renderBookmarks() {
+    $('#panel-body').innerHTML=`<p class="panel-description">${current.marks.length} 个书签</p>${current.marks.map(m=>`<article class="note-card"><button class="text-button" data-location="${escape(m.cfi)}">${escape(m.label)} · ${Math.round((m.progress||0)*100)}%</button><footer><span></span><button data-remove-mark="${m.id}">移除</button></footer></article>`).join('')||'<p class="panel-description">还没有书签。</p>'}`;
   }
 
   document.addEventListener('click',async e=>{
@@ -617,10 +592,7 @@
     if(target.dataset.font){settings.font=Math.max(14,Math.min(36,settings.font+Number(target.dataset.font)));$('#font-value').textContent=`${settings.font} px`;refreshLayout();return;}
     if(target.dataset.writing){await changeWritingMode(target.dataset.writing);return;}
     if(target.dataset.theme){settings.theme=target.dataset.theme;applyTheme();renderSettings();return;}
-    if(target.dataset.removeMark){current.marks=current.marks.filter(m=>m.id!==target.dataset.removeMark);persist();renderNotes();relocated(rendition.currentLocation());return;}
-    if(target.dataset.removeNote){const note=current.notes.find(n=>n.id===target.dataset.removeNote);if(note)rendition.annotations.remove(note.cfi,'highlight');current.notes=current.notes.filter(n=>n.id!==target.dataset.removeNote);persist();renderNotes();return;}
-    if(target.id==='new-page-note'){savedSelection={cfi:current.cfi,quote:current.chapter};noteDialog();}
-    if(target.id==='export-notes')exportNotes();
+    if(target.dataset.removeMark){current.marks=current.marks.filter(m=>m.id!==target.dataset.removeMark);persist();renderBookmarks();relocated(rendition.currentLocation());return;}
   });
   $('#file').addEventListener('change',e=>importBook(e.target.files[0]));
   $('#library-query').addEventListener('input',renderLibrary);
@@ -633,10 +605,8 @@
   $('#page-mode').addEventListener('click',()=>changeFlow('paginated'));$('#scroll-mode').addEventListener('click',()=>changeFlow('scrolled-doc'));
   $('#progress').addEventListener('change',async e=>{if(!book)return;const fraction=Math.min(.999,Number(e.target.value)/1000);await navigate(book.locations.length()?book.locations.cfiFromPercentage(fraction):book.spine.spineItems[Math.floor(fraction*book.spine.spineItems.length)]?.href);});
   $('#site-theme').addEventListener('click',()=>{settings.theme=settings.theme==='dark'?'paper':'dark';applyTheme();});
-  $('#highlight').addEventListener('click',()=>saveSelection());$('#add-note').addEventListener('click',noteDialog);
-  $('#note-dialog').addEventListener('close',()=>{if($('#note-dialog').returnValue==='save')saveSelection($('#note-text').value.trim());});
-  // Trap keyboard focus inside the full-screen reader, while native note dialogs retain their own trap.
-  $('#reader').addEventListener('keydown',e=>{if(e.key!=='Tab'||$('#note-dialog').open)return;const items=$$('#reader button,#reader input').filter(x=>!x.disabled&&x.getClientRects().length);const first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
+  // Trap keyboard focus inside the full-screen reader.
+  $('#reader').addEventListener('keydown',e=>{if(e.key!=='Tab')return;const items=$$('#reader button,#reader input').filter(x=>!x.disabled&&x.getClientRects().length);const first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
   let dragCounter=0;
   $('#library').addEventListener('dragenter',e=>{e.preventDefault();dragCounter++;$('#empty').classList.add('dragging');});
   $('#library').addEventListener('dragover',e=>e.preventDefault());
