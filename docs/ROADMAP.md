@@ -21,6 +21,8 @@ Current domain split:
 
 ## 2. Current Baseline
 
+Research reliability work (2026-10-29): explicit POAV/PONAV labels, honest missing volume metrics, durable HTTP TXT attachments, ordered-CIF symmetry expansion and a fail-closed disorder/occupancy check. General disorder configuration generation and ensemble averaging remain future scientific modeling work; the guard is not an automatic disorder solver.
+
 As of `2026-03-26`, ChemEx already has:
 
 - React + TypeScript + Vite + Mantine frontend

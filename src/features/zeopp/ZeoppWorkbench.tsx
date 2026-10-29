@@ -151,6 +151,9 @@ function formatValue(metric: ZeoppMetric) {
     return '—';
   }
   if (typeof metric.value === 'number') {
+    if (metric.key.startsWith('number_of_')) {
+      return String(metric.value);
+    }
     return `${metric.value.toFixed(Math.abs(metric.value) >= 100 ? 2 : 4)}${metric.unit ? ` ${metric.unit}` : ''}`;
   }
   return `${metric.value}${metric.unit ? ` ${metric.unit}` : ''}`;
@@ -312,13 +315,27 @@ function PsdChart({ locale, rows }: { locale: Locale; rows: ZeoppSeriesRow[] }) 
   );
 }
 
-function MetricGrid({ metrics }: { metrics: ZeoppMetric[] }) {
+function MetricGrid({ metrics, locale }: { metrics: ZeoppMetric[]; locale: Locale }) {
+  const labels: Record<string, string> = {
+    volpo_a3: 'POAV — 可达探针可占据体积',
+    volpo_vf: 'POAV — 体积分数',
+    volpo_cm3_g: 'POAV — 质量比孔容',
+    nvolpo_a3: 'PONAV — 不可达探针可占据体积',
+    nvolpo_vf: 'PONAV — 体积分数',
+    nvolpo_cm3_g: 'PONAV — 质量比孔容',
+    vol_a3: 'AV — 探针中心可达体积',
+    vol_vf: 'AV — 体积分数',
+    vol_cm3_g: 'AV — 质量比孔容',
+    nvol_a3: 'NAV — 探针中心不可达体积',
+    nvol_vf: 'NAV — 体积分数',
+    nvol_cm3_g: 'NAV — 质量比孔容',
+  };
   return (
     <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
       {metrics.map((metric) => (
         <Paper key={metric.key} radius={22} className="cluster-card">
-          <div className="cluster-title">{metric.label}</div>
-          <div className="summary-title">{formatValue(metric)}</div>
+          <div className="cluster-title">{locale === 'zh' ? labels[metric.key] ?? metric.label : metric.label}</div>
+          <div className="summary-title">{metric.value == null ? (locale === 'zh' ? '未提供' : 'Not reported') : formatValue(metric)}</div>
         </Paper>
       ))}
     </SimpleGrid>
@@ -435,14 +452,14 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
       '# ChemEx ZEO++ Output',
       '',
       `- Mode: ${result?.mode ?? subtab}`,
-      `- File: ${file?.name ?? 'N/A'}`,
+      `- File: ${job?.filename ?? 'N/A'}`,
       '',
       '```text',
       rawOutput,
       '```',
     ];
     return lines.join('\n');
-  }, [file?.name, rawOutput, result?.mode, subtab]);
+  }, [job?.filename, rawOutput, result?.mode, subtab]);
 
   return (
     <Stack gap="lg">
@@ -493,6 +510,14 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
                   </Text>
                 </Paper>
               </Stack>
+
+              {file?.name.toLowerCase().endsWith('.cif') ? (
+                <Text size="sm" c="dimmed">
+                  {locale === 'zh'
+                    ? 'CIF 会展开为完整 P1 晶胞。分数占位或无序结构须先构建合理的满占位有序模型；程序不会自动删除替代构象或修改占有率。'
+                    : 'CIFs are expanded to full P1 cells. Partial occupancy / disorder requires physically consistent ordered models; alternate sites are not automatically removed or set to full occupancy.'}
+                </Text>
+              ) : null}
 
               {subtab === 'res' ? (
                 <SegmentedControl
@@ -572,7 +597,15 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
                 </Group>
 
                 {result.rows?.length ? <PsdChart locale={locale} rows={result.rows} /> : null}
-                {result.metrics?.length ? <MetricGrid metrics={result.metrics} /> : null}
+                {result.warning ? <Alert color="yellow">{result.warning}</Alert> : null}
+                {result.structure?.normalized ? (
+                  <Text size="sm" c="dimmed">
+                    {locale === 'zh'
+                      ? `计算模型：满占位 P1 晶胞，${result.structure.unitCellSites} 个原子。`
+                      : `Calculation model: full-occupancy P1 cell, ${result.structure.unitCellSites} atoms.`}
+                  </Text>
+                ) : null}
+                {result.metrics?.length ? <MetricGrid metrics={result.metrics} locale={locale} /> : null}
                 {result.channels ? <ChannelSummary channels={result.channels} /> : null}
 
                 <Paper radius={24} className="code-panel">
@@ -596,7 +629,16 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
                           radius="xl"
                           variant="light"
                           leftSection={<IconDownload size={16} />}
-                          onClick={() => downloadTextArtifact(`chemex-${subtab}.txt`, rawOutput)}
+                          component="a"
+                          href={result.rawOutputDownloadUrl ?? (result.jobId ? `./api/zeopp/export/${result.jobId}/${result.mode ?? subtab}.txt` : undefined)}
+                          download={`chemex-${result.mode ?? subtab}.txt`}
+                          disabled={!rawOutput}
+                          onClick={(event) => {
+                            if (!result.rawOutputDownloadUrl && !result.jobId) {
+                              event.preventDefault();
+                              downloadTextArtifact(`chemex-${result.mode ?? subtab}.txt`, rawOutput);
+                            }
+                          }}
                         >
                           {t.exportTxt}
                         </Button>
@@ -604,7 +646,8 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
                           radius="xl"
                           variant="light"
                           leftSection={<IconDownload size={16} />}
-                          onClick={() => downloadTextArtifact(`chemex-${subtab}.md`, rawMarkdown)}
+                          disabled={!rawOutput}
+                          onClick={() => downloadTextArtifact(`chemex-${result.mode ?? subtab}.md`, rawMarkdown)}
                         >
                           {t.exportMd}
                         </Button>

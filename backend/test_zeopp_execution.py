@@ -17,7 +17,7 @@ class ZeoppExecutionTest(unittest.TestCase):
         folder = tempfile.TemporaryDirectory()
         self.addCleanup(folder.cleanup)
         self.job_dir = Path(folder.name)
-        self.input_path = self.job_dir / 'input.cif'
+        self.input_path = self.job_dir / 'input.v1'
         self.input_path.write_text('test fixture', encoding='utf-8')
         self.output_path = self.job_dir / 'res.out'
 

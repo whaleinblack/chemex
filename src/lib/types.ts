@@ -128,6 +128,12 @@ export type ZeoppResult = {
   metrics?: ZeoppMetric[];
   channels?: ZeoppChannelSummary;
   rawOutput?: string;
+  rawOutputDownloadUrl?: string;
+  structure?: {
+    normalized: boolean;
+    unitCellSites?: number;
+    sourceSpaceGroup?: string;
+  };
   stdout?: string;
   stderr?: string;
   returnCode?: number;

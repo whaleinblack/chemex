@@ -1,5 +1,16 @@
 # ChemEx Handoff
 
+## Research reliability update (2026-10-29)
+
+- Volume cards distinguish AV/NAV and POAV/PONAV. Missing channel/pocket fields remain unknown and display “未提供 / Not reported”; measured zeros remain zero.
+- TXT exports use `GET /api/zeopp/export/<job_id>/<mode>.txt` with `Content-Disposition: attachment`, a stable `chemex-<mode>.txt` name and exact raw bytes. The route reads the output file, independent of in-memory jobs. MD blob URL cleanup is delayed to allow consumption; export names use the result's mode.
+- Install `backend/requirements-structure.txt` into the ChemEx virtual environment before restarting the updated backend. CIF validation must not silently fall back to the raw engine reader if Gemmi is missing.
+- Ordered CIFs are expanded to full P1 with Gemmi; special-position duplicates are handled by symmetry expansion and legal multiline atom records are parsed. Original uploads are preserved. Staged models and preparation metadata are job artifacts.
+- Fractional/unknown occupancy and explicit disorder groups are rejected with an actionable bilingual error. General mutually exclusive conformer selection or disorder-ensemble averaging is not implemented. Users must supply physically consistent ordered configurations; changing output density alone does not repair geometry.
+- Regression command: `python -m unittest backend.test_zeopp_execution backend.test_zeopp_science backend.test_zeopp_export -v`, followed by `npm ci`, `npm run build` and a background browser check. Synthetic test structures only; do not publish calculation uploads or private CIFs.
+- Production `/research/` serves a snapshot at `/srv/chemex/home/current/research/`, while `/research/api/` proxies the service at port 4180. Updating `/srv/chemex/app/dist` alone does **not** update the visible research workbench. Inspect live source differences, retain a backup and update only this research snapshot. Preserve homepage, auth gate and unrelated applications.
+- Deployment status must be reported separately from local implementation/testing. SSH credentials are ignored; never add `server_key` or `known_hosts` to a commit.
+
 ## 1. Project Summary
 
 ChemEx is a bilingual web application for porous-material and COF computation.

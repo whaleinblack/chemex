@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import os
+import re
 import threading
 import time
 import uuid
@@ -8,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from flask import Flask, jsonify, redirect, request, send_from_directory
+from werkzeug.utils import secure_filename
 
 from .services_sesami import get_sesami_status, parse_upload as parse_sesami_upload, run_workflow as run_sesami_workflow
 from .services_zeopp import detect_zeopp_binary, run_workflow as run_zeopp_workflow
@@ -202,7 +204,7 @@ def start_zeopp_job(mode: str):
     raw_bytes = upload.read()
     job = create_job(f'zeopp:{mode}', upload.filename)
     job_dir = ARTIFACTS_DIR / job['jobId']
-    input_path = job_dir / upload.filename
+    input_path = job_dir / (secure_filename(upload.filename) or 'structure.cif')
     input_path.write_bytes(raw_bytes)
 
     params = {
@@ -309,6 +311,18 @@ def zeopp_volpo() -> Any:
 @app.get('/api/artifacts/<job_id>/<path:filename>')
 def artifacts(job_id: str, filename: str) -> Any:
     return send_from_directory(ARTIFACTS_DIR / job_id, filename)
+
+
+@app.get('/api/zeopp/export/<job_id>/<mode>.txt')
+def export_zeopp_text(job_id: str, mode: str) -> Any:
+    if not re.fullmatch(r'[0-9a-f]{32}', job_id) or mode not in {'psd', 'res', 'chan', 'sa', 'vol', 'volpo'}:
+        return jsonify({'error': 'Unknown ZEO++ output.'}), 404
+    # Serve the durable engine output directly, including after a service restart.
+    # The browser receives an HTTP attachment instead of a short-lived blob URL.
+    return send_from_directory(
+        ARTIFACTS_DIR / job_id, f'{mode}.out', as_attachment=True,
+        download_name=f'chemex-{mode}.txt', mimetype='text/plain',
+    )
 
 
 @app.get('/')

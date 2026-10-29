@@ -40,6 +40,8 @@ backend-server*.log
 backend-8001.*
 backend-server-8001.*
 id_ed25519_github
+server_key
+known_hosts
 
 # Desktop packaging
 .packenv/

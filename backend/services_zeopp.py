@@ -12,6 +12,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, TextIO
 
+from .structures import prepare_structure
+
 ROOT = Path(__file__).resolve().parents[1]
 ZEOPP_RUNTIME_DIR = ROOT / 'vendor' / 'zeopp-lsmo' / 'zeo++'
 ZEOPP_TOOLCHAIN_BIN = ROOT / 'zeopp-toolchain' / 'Library' / 'mingw-w64' / 'bin'
@@ -297,21 +299,23 @@ def parse_volume_output(text: str, probe_occupiable: bool) -> dict[str, Any]:
     mapping = [
         ('unitcell_volume', 'Unit cell volume', 'Unitcell_volume', 'A^3'),
         ('density', 'Density', 'Density', 'g/cm^3'),
-        (f'{base_mode}_a3', 'Accessible volume', f'{prefix}AV_A^3', 'A^3'),
-        (f'{base_mode}_vf', 'Accessible volume fraction', f'{prefix}AV_Volume_fraction', None),
-        (f'{base_mode}_cm3_g', 'Accessible volume gravimetric', f'{prefix}AV_cm^3/g', 'cm^3/g'),
-        (f'n{base_mode}_a3', 'Non-accessible volume', f'{prefix}NAV_A^3', 'A^3'),
-        (f'n{base_mode}_vf', 'Non-accessible volume fraction', f'{prefix}NAV_Volume_fraction', None),
-        (f'n{base_mode}_cm3_g', 'Non-accessible volume gravimetric', f'{prefix}NAV_cm^3/g', 'cm^3/g'),
+        (f'{base_mode}_a3', f'{prefix}AV — accessible volume', f'{prefix}AV_A^3', 'A^3'),
+        (f'{base_mode}_vf', f'{prefix}AV — volume fraction', f'{prefix}AV_Volume_fraction', None),
+        (f'{base_mode}_cm3_g', f'{prefix}AV — gravimetric volume', f'{prefix}AV_cm^3/g', 'cm^3/g'),
+        (f'n{base_mode}_a3', f'{prefix}NAV — non-accessible volume', f'{prefix}NAV_A^3', 'A^3'),
+        (f'n{base_mode}_vf', f'{prefix}NAV — volume fraction', f'{prefix}NAV_Volume_fraction', None),
+        (f'n{base_mode}_cm3_g', f'{prefix}NAV — gravimetric volume', f'{prefix}NAV_cm^3/g', 'cm^3/g'),
         ('number_of_channels', 'Number of channels', 'Number_of_channels', None),
         ('channel_volume', 'Channel volume', 'Channel_volume_A^3', 'A^3'),
         ('number_of_pockets', 'Number of pockets', 'Number_of_pockets', None),
         ('pocket_volume', 'Pocket volume', 'Pocket_volume_A^3', 'A^3'),
     ]
-    metrics = [
-        {'key': key, 'label': label, 'value': _extract_number(text, source), 'unit': unit}
-        for key, label, source, unit in mapping
-    ]
+    metrics = []
+    for key, label, source, unit in mapping:
+        match = re.search(rf'(?<![\w]){re.escape(source)}:\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)', text)
+        # An absent upstream field is unknown, not a measured zero. In particular,
+        # VOLPO does not emit VOL's per-channel / per-pocket contributions.
+        metrics.append({'key': key, 'label': label, 'value': float(match[1]) if match else None, 'unit': unit})
     return {'mode': base_mode, 'metrics': metrics}
 
 
@@ -381,8 +385,8 @@ def drain_pipe(
         pipe.close()
 
 
-def build_command(binary: Path, mode: str, input_path: Path, params: dict[str, Any]) -> tuple[list[str], Path, bool]:
-    job_dir = input_path.parent
+def build_command(binary: Path, mode: str, input_path: Path, params: dict[str, Any], *, output_dir: Path | None = None) -> tuple[list[str], Path, bool]:
+    job_dir = output_dir or input_path.parent
     if mode == 'psd':
         output_path = job_dir / 'psd.out'
         command = [
@@ -489,7 +493,8 @@ def run_workflow(
     if zeopp_binary is None:
         raise RuntimeError(zeopp_message)
 
-    command, output_path, extended = build_command(zeopp_binary, mode, input_path, params)
+    prepared_path, structure_metadata = prepare_structure(input_path)
+    command, output_path, extended = build_command(zeopp_binary, mode, prepared_path, params, output_dir=job_dir)
     timeout_seconds = get_zeopp_timeout_seconds()
     stdout_lines: list[str] = []
     stderr_lines: list[str] = []
@@ -500,6 +505,7 @@ def run_workflow(
         'jobId': job_id, 'mode': mode, 'params': params, 'command': command,
         'timeoutSeconds': timeout_seconds, 'startedAt': time.time(),
         'status': 'running', 'returnCode': None, 'error': None,
+        'structure': structure_metadata,
     }
     metadata_path.write_text(json.dumps(metadata, indent=2), encoding='utf-8')
     started = time.monotonic()
@@ -570,6 +576,8 @@ def run_workflow(
             'stdout': stdout_text,
             'stderr': stderr_text,
             'returnCode': returncode,
+            'structure': structure_metadata,
+            'rawOutputDownloadUrl': f'./api/zeopp/export/{job_id}/{mode}.txt',
             'artifacts': [
                 {'name': path.name, 'url': f'./api/artifacts/{job_id}/{path.name}'}
                 for path in (output_path, metadata_path, stdout_path, stderr_path)
@@ -578,6 +586,11 @@ def run_workflow(
         if returncode != 0:
             result['warning'] = f'ZEO++ returned exit code {returncode}, but the {mode.upper()} output file was written and parsed successfully.'
             metadata['warning'] = result['warning']
+        if structure_metadata.get('normalized'):
+            result['artifacts'].extend([
+                {'name': 'structure-preparation.json', 'url': f'./api/artifacts/{job_id}/structure-preparation.json'},
+                {'name': 'prepared/structure-p1.cif', 'url': f'./api/artifacts/{job_id}/prepared/structure-p1.cif'},
+            ])
         metadata['status'] = 'completed'
         return result
     except Exception as exc:

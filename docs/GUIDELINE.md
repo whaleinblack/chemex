@@ -88,6 +88,8 @@ The normalized result should be designed for the UI first, but never discard the
 
 ### 3.3 Input Handling
 
+ZEO++ CIF intake uses Gemmi (`backend/requirements-structure.txt`). Validate symmetry, elements, coordinates and occupancies, then expand an ordered CIF to a full-occupancy P1 cell. Preserve the original upload; put the staged model in `prepared/structure-p1.cif` and record `structure-preparation.json`. Reject partial/unknown occupancy and explicit disorder groups before launching the engine. Never silently keep both mutually exclusive conformers, delete a conformer, set fractional occupancies to one, or merely rescale density. A representative ordered model requires a chemically consistent configuration; general disorder-ensemble modeling is not implemented.
+
 Input handling must be explicit and layered:
 
 1. upload validation
@@ -100,6 +102,8 @@ If preprocessing is incomplete, say so clearly instead of pretending full suppor
 
 
 ### 3.4 Units and Labels
+
+VOL and VOLPO results must retain AV/NAV versus POAV/PONAV names. An absent upstream field must be `null` / “Not reported”, never a fabricated zero. Raw TXT export is an authenticated HTTP attachment backed by the durable engine output; it must still work when the in-memory job entry is absent.
 
 All outputs must include units wherever appropriate.
 

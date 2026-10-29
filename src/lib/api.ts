@@ -108,5 +108,6 @@ export function downloadTextArtifact(filename: string, content: string) {
   document.body.append(anchor);
   anchor.click();
   anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  // Navigation / download consumption may happen after the click task finishes.
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
