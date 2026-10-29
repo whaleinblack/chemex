@@ -53,11 +53,16 @@ class ExportTest(unittest.TestCase):
     def test_candidate_attachment_and_query_traversal_guard(self):
         folder = self.root / self.job_id / 'ordered-models' / 'model-1'
         folder.mkdir(parents=True)
+        (folder / 'candidate.cif').write_bytes(b'data_synthetic\n')
         (folder / 'volpo.out').write_bytes(self.data)
         response = self.client.get(f'/api/zeopp/export/{self.job_id}/volpo.txt?model=model-1')
         self.addCleanup(response.close)
         self.assertEqual(response.data, self.data)
         self.assertIn('chemex-volpo-model-1.txt', response.headers['Content-Disposition'])
+        cif = self.client.get(f'/api/artifacts/{self.job_id}/ordered-models/model-1/candidate.cif?download=1')
+        self.addCleanup(cif.close)
+        self.assertEqual(cif.data, b'data_synthetic\n')
+        self.assertIn('ordered-model-1.cif', cif.headers['Content-Disposition'])
         for model in ('../model-1', 'model-5', 'model-1/../../'):
             response = self.client.get(f'/api/zeopp/export/{self.job_id}/volpo.txt', query_string={'model': model})
             self.addCleanup(response.close)

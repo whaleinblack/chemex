@@ -330,7 +330,11 @@ def zeopp_volpo() -> Any:
 def artifacts(job_id: str, filename: str) -> Any:
     if not re.fullmatch(r'[0-9a-f]{32}', job_id):
         return jsonify({'error': 'Unknown calculation artifact.'}), 404
-    return send_from_directory(ARTIFACTS_DIR / job_id, filename, as_attachment=request.args.get('download') == '1')
+    model_cif = re.fullmatch(r'ordered-models/(model-[1-4])/candidate\.cif', filename)
+    return send_from_directory(
+        ARTIFACTS_DIR / job_id, filename, as_attachment=request.args.get('download') == '1',
+        download_name=f'ordered-{model_cif[1]}.cif' if model_cif else None,
+    )
 
 
 @app.get('/api/zeopp/export/<job_id>/<mode>.txt')
