@@ -7,6 +7,10 @@ from pathlib import Path
 from typing import Any
 
 
+class DisorderError(ValueError):
+    """An ordered-candidate workflow may be offered for this input."""
+
+
 def prepare_structure(path: Path) -> tuple[Path, dict[str, Any]]:
     if path.suffix.lower() != '.cif':
         return path, {'format': path.suffix.lower().lstrip('.'), 'normalized': False}
@@ -30,7 +34,7 @@ def prepare_structure(path: Path) -> tuple[Path, dict[str, Any]]:
         groups = list(block.find_values('_atom_site_disorder_group'))
         disorder_groups = sorted({gemmi.cif.as_string(g) for g in groups if gemmi.cif.as_string(g) not in {'', '.', '?', '0'}})
         if problem_sites or disorder_groups:
-            raise ValueError(
+            raise DisorderError(
                 '检测到分数占位或无序原子，已停止计算，避免将互斥构象重复计入。'
                 '请先构建化学合理、满占位且无重叠的有序模型；不能只改密度或把全部占有率改为 1。 '
                 'Disordered / partial-occupancy CIF: choose physically consistent ordered configurations before calculation. '

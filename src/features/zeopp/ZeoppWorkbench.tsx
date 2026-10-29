@@ -385,6 +385,24 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
   const [resMode, setResMode] = useState<'standard' | 'extended'>('extended');
   const [job, setJob] = useState<JobSnapshot<ZeoppResult> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [maxOrderedModels, setMaxOrderedModels] = useState(2);
+  const [modelIndex, setModelIndex] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('job');
+    if (!id || !/^[0-9a-f]{32}$/.test(id)) return;
+    let cancelled = false;
+    fetchJob<ZeoppResult>(id).then((snapshot) => {
+      if (cancelled || !snapshot.workflow.startsWith('zeopp:')) return;
+      const mode = snapshot.workflow.slice(6) as ZeoppSubtab;
+      if (['psd', 'res', 'chan', 'sa', 'vol', 'volpo'].includes(mode)) setSubtab(mode);
+      setJob(snapshot);
+    }).catch((nextError) => {
+      if (!cancelled) setError(nextError instanceof Error ? nextError.message : 'Could not restore job.');
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!job || job.status === 'completed' || job.status === 'failed') {
@@ -412,19 +430,27 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
     return () => window.clearInterval(timer);
   }, [job]);
 
-  const running = job?.status === 'queued' || job?.status === 'running';
-  const result = job?.result ?? null;
+  const running = submitting || job?.status === 'queued' || job?.status === 'running';
+  const workflowResult = job?.result ?? null;
+  const result = workflowResult?.orderedModels?.[modelIndex] ?? workflowResult;
+  const disorderDetected = job?.errorCode === 'cif_disorder' || Boolean(job?.error?.includes('Disordered / partial-occupancy'));
   const displayError = error || job?.error;
 
-  const submit = async () => {
+  const submit = async (ordered = false) => {
     if (!file) {
       setError(t.noFile);
       return;
     }
     try {
+      setSubmitting(true);
       setError(null);
       setJob(null);
+      setModelIndex(0);
       const params: Record<string, string | number | boolean> = {};
+      if (ordered) {
+        params.disorderStrategy = 'ordered_candidates';
+        params.maxOrderedModels = maxOrderedModels;
+      }
       if (subtab === 'res') {
         params.extended = resMode === 'extended';
       } else if (subtab === 'chan') {
@@ -440,8 +466,13 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
         params,
       });
       setJob(next);
+      const url = new URL(window.location.href);
+      url.searchParams.set('job', next.jobId);
+      window.history.replaceState(null, '', url);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Request failed.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -453,13 +484,14 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
       '',
       `- Mode: ${result?.mode ?? subtab}`,
       `- File: ${job?.filename ?? 'N/A'}`,
+      ...(result?.modelId ? [`- Model: ${result.modelId}`] : []),
       '',
       '```text',
       rawOutput,
       '```',
     ];
     return lines.join('\n');
-  }, [job?.filename, rawOutput, result?.mode, subtab]);
+  }, [job?.filename, rawOutput, result?.mode, result?.modelId, subtab]);
 
   return (
     <Stack gap="lg">
@@ -514,8 +546,8 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
               {file?.name.toLowerCase().endsWith('.cif') ? (
                 <Text size="sm" c="dimmed">
                   {locale === 'zh'
-                    ? 'CIF 会展开为完整 P1 晶胞。分数占位或无序结构须先构建合理的满占位有序模型；程序不会自动删除替代构象或修改占有率。'
-                    : 'CIFs are expanded to full P1 cells. Partial occupancy / disorder requires physically consistent ordered models; alternate sites are not automatically removed or set to full occupancy.'}
+                    ? '保留原始 CIF。检测到已标注的构象无序后，可生成通过周期接触和配位初筛的满占位 P1 候选，并逐个计算；不直接把所有占有率改为 1。'
+                    : 'The original CIF is preserved. Explicit conformational disorder can be converted to screened full-occupancy P1 candidates and calculated individually.'}
                 </Text>
               ) : null}
 
@@ -569,7 +601,21 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
 
               {job ? <Text className="progress-meta">{job.status === 'failed' ? t.failedTitle : `${job.stage} · ${job.progress}%`}</Text> : null}
               {displayError ? <Text role="alert" className="error-text">{displayError}</Text> : null}
-              {job?.warning ? <Text className="notice-text">{job.warning}</Text> : null}
+              {disorderDetected && !running ? (
+                <Alert color="blue" title={locale === 'zh' ? '为无序结构构建候选模型' : 'Build ordered candidates'}>
+                  <Stack gap="sm">
+                    <Text size="sm">{locale === 'zh'
+                      ? '按固定骨架的连接锚点配对局部替代构象，保持可表示的占有率比例，剔除周期近接触和配位异常，再分别计算。置换无序、空位或需要更大超胞的情况会另行提示。'
+                      : 'Match local alternatives by fixed-atom anchors, preserve representable populations, screen periodic contacts and coordination, then calculate each candidate. Substitution, vacancies and larger-supercell cases need dedicated modeling.'}</Text>
+                    <NumberInput label={locale === 'zh' ? '最多候选模型数' : 'Maximum candidates'} min={1} max={4} allowDecimal={false}
+                      value={maxOrderedModels} onChange={(value) => setMaxOrderedModels(Math.max(1, Math.min(4, Number(value) || 2)))} />
+                    <Button type="button" radius="xl" onClick={() => void submit(true)} disabled={!file || !zeoppReady}>
+                      {locale === 'zh' ? '生成候选有序模型并计算' : 'Build ordered candidates and calculate'}
+                    </Button>
+                  </Stack>
+                </Alert>
+              ) : null}
+              {job?.warning && !workflowResult?.disorderSummary ? <Text className="notice-text">{job.warning}</Text> : null}
 
               <SubmitButton loading={Boolean(running)} progress={job?.progress ?? 0} label={t.run} disabled={!zeoppReady} />
             </Stack>
@@ -585,6 +631,29 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
 
             {result ? (
               <Stack gap="lg">
+                {workflowResult?.disorderSummary && workflowResult.orderedModels ? (
+                  <Paper radius={22} className="cluster-card">
+                    <Stack gap="sm">
+                      <Text fw={700}>{locale === 'zh' ? '候选有序模型对照' : 'Ordered candidate comparison'}</Text>
+                      <Text size="sm">{locale === 'zh'
+                        ? `已匹配 ${workflowResult.disorderSummary.localConformerUnits} 个局部构象单元，${workflowResult.disorderSummary.acceptedModels} 个候选通过初筛。未进行能量优化，候选范围不代表真实无序的统计误差。`
+                        : `${workflowResult.disorderSummary.localConformerUnits} local units matched; ${workflowResult.disorderSummary.acceptedModels} candidates passed screening. No energy optimization; the range is not statistical uncertainty.`}</Text>
+                      <SegmentedControl value={String(modelIndex)} onChange={(value) => setModelIndex(Number(value))}
+                        data={workflowResult.orderedModels.map((model, index) => ({value: String(index), label: `${locale === 'zh' ? '模型' : 'Model'} ${index + 1}`}))} />
+                      {workflowResult.disorderSummary.metricRanges.filter((m) => m.key === `${result.mode}_cm3_g`).map((m) => (
+                        <Text key={m.key} fw={700}>{result.mode === 'volpo' ? 'POAV' : 'AV'} {locale === 'zh' ? '候选范围' : 'candidate range'}: {m.minimum.toFixed(5)}–{m.maximum.toFixed(5)} {m.unit}</Text>
+                      ))}
+                      <Group>
+                        <Button component="a" href={result.modelCifUrl} download={`ordered-${result.modelId}.cif`} variant="light" radius="xl">
+                          {locale === 'zh' ? '下载当前模型 CIF' : 'Download model CIF'}
+                        </Button>
+                        <Button component="a" href={workflowResult.disorderSummary.reportUrl} download variant="light" radius="xl">
+                          {locale === 'zh' ? '下载构建检查报告' : 'Download modeling report'}
+                        </Button>
+                      </Group>
+                    </Stack>
+                  </Paper>
+                ) : null}
                 <Group gap="sm">
                   <Badge radius="xl" color="ocean" variant="light">
                     {result.mode?.toUpperCase() ?? subtab.toUpperCase()}
@@ -631,7 +700,7 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
                           leftSection={<IconDownload size={16} />}
                           component="a"
                           href={result.rawOutputDownloadUrl ?? (result.jobId ? `./api/zeopp/export/${result.jobId}/${result.mode ?? subtab}.txt` : undefined)}
-                          download={`chemex-${result.mode ?? subtab}.txt`}
+                          download={`chemex-${result.mode ?? subtab}${result.modelId ? '-' + result.modelId : ''}.txt`}
                           disabled={!rawOutput}
                           onClick={(event) => {
                             if (!result.rawOutputDownloadUrl && !result.jobId) {
@@ -647,7 +716,7 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
                           variant="light"
                           leftSection={<IconDownload size={16} />}
                           disabled={!rawOutput}
-                          onClick={() => downloadTextArtifact(`chemex-${result.mode ?? subtab}.md`, rawMarkdown)}
+                          onClick={() => downloadTextArtifact(`chemex-${result.mode ?? subtab}${result.modelId ? '-' + result.modelId : ''}.md`, rawMarkdown)}
                         >
                           {t.exportMd}
                         </Button>

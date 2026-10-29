@@ -50,6 +50,19 @@ class ExportTest(unittest.TestCase):
                 self.addCleanup(response.close)
                 self.assertEqual(response.status_code, 404)
 
+    def test_candidate_attachment_and_query_traversal_guard(self):
+        folder = self.root / self.job_id / 'ordered-models' / 'model-1'
+        folder.mkdir(parents=True)
+        (folder / 'volpo.out').write_bytes(self.data)
+        response = self.client.get(f'/api/zeopp/export/{self.job_id}/volpo.txt?model=model-1')
+        self.addCleanup(response.close)
+        self.assertEqual(response.data, self.data)
+        self.assertIn('chemex-volpo-model-1.txt', response.headers['Content-Disposition'])
+        for model in ('../model-1', 'model-5', 'model-1/../../'):
+            response = self.client.get(f'/api/zeopp/export/{self.job_id}/volpo.txt', query_string={'model': model})
+            self.addCleanup(response.close)
+            self.assertEqual(response.status_code, 404)
+
 
 if __name__ == '__main__':
     unittest.main()

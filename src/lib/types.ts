@@ -26,6 +26,7 @@ export type JobSnapshot<T = unknown> = {
   stage: string;
   result?: T | null;
   error?: string | null;
+  errorCode?: string | null;
   warning?: string | null;
 };
 
@@ -122,6 +123,18 @@ export type ZeoppChannelSummary = {
 };
 
 export type ZeoppResult = {
+  modelId?: string;
+  modelName?: string;
+  modelCifUrl?: string;
+  orderedModels?: ZeoppResult[];
+  disorderSummary?: {
+    acceptedModels: number;
+    localConformerUnits: number;
+    searchTruncated: boolean;
+    reportUrl: string;
+    limitation: string;
+    metricRanges: Array<{ key: string; label: string; unit?: string; minimum: number; maximum: number }>;
+  };
   jobId?: string;
   mode?: string;
   rows?: ZeoppSeriesRow[];

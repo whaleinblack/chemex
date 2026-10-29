@@ -13,6 +13,7 @@ from werkzeug.utils import secure_filename
 
 from .services_sesami import get_sesami_status, parse_upload as parse_sesami_upload, run_workflow as run_sesami_workflow
 from .services_zeopp import detect_zeopp_binary, run_workflow as run_zeopp_workflow
+from .structures import DisorderError
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST_DIR = ROOT / 'dist'
@@ -87,6 +88,7 @@ def finish_job(
     result: Any = UNSET,
     error: Any = UNSET,
     warning: Any = UNSET,
+    error_code: Any = UNSET,
 ) -> None:
     with JOBS_LOCK:
         job = JOBS[job_id]
@@ -99,11 +101,13 @@ def finish_job(
             job['error'] = error
         if warning is not UNSET:
             job['warning'] = warning
+        if error_code is not UNSET:
+            job['errorCode'] = error_code
         job['updatedAt'] = time.time()
 
 
-def fail_job(job_id: str, error: str, warning: str | None = None) -> None:
-    finish_job(job_id, status='failed', error=error, warning=warning)
+def fail_job(job_id: str, error: str, warning: str | None = None, error_code: str | None = None) -> None:
+    finish_job(job_id, status='failed', error=error, warning=warning, error_code=error_code)
 
 
 def sesami_worker(
@@ -144,6 +148,8 @@ def zeopp_worker(job_id: str, input_path: Path, mode: str, params: dict[str, Any
             lambda: current_progress(job_id),
         )
         finish_job(job_id, status='completed', result=result, warning=result.get('warning'))
+    except DisorderError as exc:
+        fail_job(job_id, str(exc), error_code='cif_disorder')
     except Exception as exc:
         fail_job(job_id, str(exc))
 
@@ -201,6 +207,16 @@ def start_zeopp_job(mode: str):
     if upload is None or not upload.filename:
         return jsonify({'error': 'Please upload a structure file.'}), 400
 
+    strategy = request.form.get('disorderStrategy', 'reject')
+    if strategy not in {'reject', 'ordered_candidates'}:
+        return jsonify({'error': 'Unknown disorder strategy.'}), 400
+    try:
+        max_models = int(request.form.get('maxOrderedModels', '2'))
+        if not 1 <= max_models <= 4:
+            raise ValueError()
+    except ValueError:
+        return jsonify({'error': 'Choose 1–4 ordered models.'}), 400
+
     raw_bytes = upload.read()
     job = create_job(f'zeopp:{mode}', upload.filename)
     job_dir = ARTIFACTS_DIR / job['jobId']
@@ -212,6 +228,8 @@ def start_zeopp_job(mode: str):
         'probeRadius': request.form.get('probeRadius'),
         'numSamples': request.form.get('numSamples'),
         'extended': request.form.get('extended'),
+        'disorderStrategy': strategy,
+        'maxOrderedModels': max_models,
     }
 
     worker = threading.Thread(
@@ -310,7 +328,9 @@ def zeopp_volpo() -> Any:
 
 @app.get('/api/artifacts/<job_id>/<path:filename>')
 def artifacts(job_id: str, filename: str) -> Any:
-    return send_from_directory(ARTIFACTS_DIR / job_id, filename)
+    if not re.fullmatch(r'[0-9a-f]{32}', job_id):
+        return jsonify({'error': 'Unknown calculation artifact.'}), 404
+    return send_from_directory(ARTIFACTS_DIR / job_id, filename, as_attachment=request.args.get('download') == '1')
 
 
 @app.get('/api/zeopp/export/<job_id>/<mode>.txt')
@@ -319,9 +339,15 @@ def export_zeopp_text(job_id: str, mode: str) -> Any:
         return jsonify({'error': 'Unknown ZEO++ output.'}), 404
     # Serve the durable engine output directly, including after a service restart.
     # The browser receives an HTTP attachment instead of a short-lived blob URL.
+    folder = ARTIFACTS_DIR / job_id
+    model = request.args.get('model')
+    if model is not None:
+        if not re.fullmatch(r'model-[1-4]', model):
+            return jsonify({'error': 'Unknown ordered model.'}), 404
+        folder = folder / 'ordered-models' / model
     return send_from_directory(
-        ARTIFACTS_DIR / job_id, f'{mode}.out', as_attachment=True,
-        download_name=f'chemex-{mode}.txt', mimetype='text/plain',
+        folder, f'{mode}.out', as_attachment=True,
+        download_name=f'chemex-{mode}{"-" + model if model else ""}.txt', mimetype='text/plain',
     )
 
 

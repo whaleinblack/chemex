@@ -489,6 +489,8 @@ def run_workflow(
     advance: Callable[[str, int], None],
     current_progress: Callable[[], int],
 ) -> dict[str, Any]:
+    if params.get('disorderStrategy') == 'ordered_candidates':
+        return run_ordered_workflow(job_id, job_dir, input_path, mode, params, advance, current_progress)
     zeopp_binary, zeopp_message = detect_zeopp_binary()
     if zeopp_binary is None:
         raise RuntimeError(zeopp_message)
@@ -604,3 +606,39 @@ def run_workflow(
             elapsedSeconds=round(time.monotonic() - started, 3),
         )
         metadata_path.write_text(json.dumps(metadata, indent=2), encoding='utf-8')
+
+
+def run_ordered_workflow(job_id, job_dir, input_path, mode, params, advance, current_progress):
+    from .disorder import build_ordered_candidates, LIMITATION
+    advance('building_ordered_candidates', 3)
+    models, report = build_ordered_candidates(input_path, job_dir, int(params.get('maxOrderedModels') or 2))
+    outputs = []
+    child_params = {k: v for k, v in params.items() if k not in {'disorderStrategy', 'maxOrderedModels'}}
+    for index, model in enumerate(models):
+        model_id = model['modelId']
+        folder = model['path'].parent
+        progress = [0]
+        def update(stage, value):
+            progress[0] = max(progress[0], value)
+            advance(f'{model_id}:{stage}', 10 + int(85 * (index + value / 100) / len(models)))
+        result = run_workflow(job_id, folder, model['path'], mode, child_params, update, lambda: progress[0])
+        for artifact in result['artifacts']:
+            artifact['url'] = f'./api/artifacts/{job_id}/ordered-models/{model_id}/{artifact["name"]}'
+        result.update({'modelId': model_id, 'modelName': f'Ordered candidate {index + 1}',
+                       'rawOutputDownloadUrl': f'./api/zeopp/export/{job_id}/{mode}.txt?model={model_id}',
+                       'modelCifUrl': f'./api/artifacts/{job_id}/ordered-models/{model_id}/candidate.cif?download=1',
+                       'validation': model['record']['validation'], 'composition': model['record']['composition']})
+        outputs.append(result)
+    ranges = []
+    for metric in outputs[0].get('metrics', []):
+        values = [m['value'] for output in outputs for m in output.get('metrics', []) if m['key'] == metric['key'] and isinstance(m['value'], (int, float))]
+        if len(values) == len(outputs) and metric['key'].endswith(('_cm3_g', '_vf', '_a3')):
+            ranges.append({'key': metric['key'], 'label': metric['label'], 'unit': metric['unit'],
+                           'minimum': min(values), 'maximum': max(values)})
+    summary = {'acceptedModels': len(outputs), 'localConformerUnits': report['localConformerUnits'],
+               'populationTargets': report['populationTargets'], 'searchTruncated': report['searchTruncated'],
+               'reportUrl': f'./api/artifacts/{job_id}/ordered-models/report.json?download=1', 'metricRanges': ranges,
+               'limitation': LIMITATION}
+    combined = {**outputs[0], 'orderedModels': outputs, 'disorderSummary': summary, 'warning': LIMITATION}
+    (job_dir / 'ordered-models' / 'calculation-summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+    return combined

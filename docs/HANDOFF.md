@@ -1,5 +1,15 @@
 # ChemEx Handoff
 
+## Explicit conformer candidate workflow
+
+- A failed fractional-occupancy/grouped-disorder job exposes `errorCode: cif_disorder`. The UI offers “生成候选有序模型并计算”, with 1–4 candidates (default 2), after this explicit user choice.
+- `disorderStrategy=ordered_candidates` matches symmetry-expanded local fragments by identical fixed-atom anchor sets. Equal composition and group populations are checked. Periodic overlap / nonbonded-heavy contacts and neighbour-count anomalies are constrained before selecting diverse arrangements; original parent symmetry is not reapplied to the mixed P1 model.
+- A bounded search (200000 nodes, pool 128) reports truncation. Multiple local units must reproduce occupancies within 1%; otherwise request a stoichiometric supercell. Unknown/ungrouped occupancies, substitution/vacancy disorder, implicit single-group alternatives, ambiguous anchors and metal coordination remain unsupported by the candidate adapter.
+- Results contain `orderedModels` and `disorderSummary`, a model selector, explicit per-model engine output and TXT attachment, candidate CIF downloads, an audit JSON and candidate metric ranges. The original upload is unchanged. Each job has isolated `ordered-models/model-N/` artifacts.
+- These are screened representative periodic candidates, not energy-minimized structures or inferred real disorder statistics. No ensemble mean or confidence interval is claimed.
+- ZEO++ run URLs carry `?job=<id>` so the existing in-memory job can be reopened for inspection; service restarts still lose the in-memory job record. Durable artifacts remain available.
+- Regression command adds `backend.test_disorder`; its public fixtures are synthetic ethane conformers. Keep all real research CIFs and their derived models out of Git.
+
 ## Research reliability update (2026-10-29)
 
 - Volume cards distinguish AV/NAV and POAV/PONAV. Missing channel/pocket fields remain unknown and display “未提供 / Not reported”; measured zeros remain zero.
