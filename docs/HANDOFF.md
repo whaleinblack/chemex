@@ -1,5 +1,10 @@
 # ChemEx Handoff
 
+## PSD two-column export
+
+- PSD provides a separate Bin / Count TXT attachment via `?format=bin-count`, with optional `model=model-N`. All histogram bins, including zero-count bins, are retained in original order and numeric text; the first line is `Bin\tCount` and Bin remains in Å. Raw output TXT remains separately available and byte-preserving.
+- Exports read durable artifacts and work without an in-memory job. Missing or malformed histograms return errors rather than an empty or partial download. Count is a sampling frequency, distinct from normalized/derivative distributions.
+
 ## Explicit conformer candidate workflow
 
 - A failed fractional-occupancy/grouped-disorder job exposes `errorCode: cif_disorder`. The UI offers “生成候选有序模型并计算”, with 1–4 candidates (default 2), after this explicit user choice.

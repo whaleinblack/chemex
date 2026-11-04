@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import os
+import math
 import re
 import threading
 import time
@@ -349,6 +350,33 @@ def export_zeopp_text(job_id: str, mode: str) -> Any:
         if not re.fullmatch(r'model-[1-4]', model):
             return jsonify({'error': 'Unknown ordered model.'}), 404
         folder = folder / 'ordered-models' / model
+    export_format = request.args.get('format', 'raw')
+    if export_format not in {'raw', 'bin-count'} or (export_format == 'bin-count' and mode != 'psd'):
+        return jsonify({'error': 'Unsupported output format.'}), 400
+    if export_format == 'bin-count':
+        source = folder / 'psd.out'
+        if not source.is_file():
+            return jsonify({'error': 'PSD output not found.'}), 404
+        rows = []
+        started = False
+        for line in source.read_text(encoding='utf-8').splitlines():
+            fields = line.split()
+            if fields == ['Bin', 'Count', 'Cumulative_dist', 'Derivative_dist']:
+                started = True
+                continue
+            if not started or not fields:
+                continue
+            try:
+                if len(fields) != 4 or any(not math.isfinite(float(v)) or float(v) < 0 for v in fields[:2]):
+                    raise ValueError('Invalid PSD row')
+            except ValueError:
+                return jsonify({'error': 'Malformed PSD output.'}), 422
+            rows.append('\t'.join(fields[:2]))
+        if not rows:
+            return jsonify({'error': 'PSD histogram is missing or empty.'}), 422
+        response = app.response_class('Bin\tCount\n' + '\n'.join(rows) + '\n', mimetype='text/plain')
+        response.headers['Content-Disposition'] = f'attachment; filename=chemex-psd{"-" + model if model else ""}-bin-count.txt'
+        return response
     return send_from_directory(
         folder, f'{mode}.out', as_attachment=True,
         download_name=f'chemex-{mode}{"-" + model if model else ""}.txt', mimetype='text/plain',

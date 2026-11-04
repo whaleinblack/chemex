@@ -68,6 +68,35 @@ class ExportTest(unittest.TestCase):
             self.addCleanup(response.close)
             self.assertEqual(response.status_code, 404)
 
+    def test_psd_bin_count_preserves_all_bins_and_separates_models(self):
+        raw = b'Pore size distribution histogram\r\nBin size (A): 0.1\r\n\r\nBin Count Cumulative_dist Derivative_dist\r\n0 0 1 0\r\n0.1 2 1 .2\r\n0.2 0 0 0\r\n'
+        for model in (None, 'model-1', 'model-2'):
+            folder = self.root / self.job_id
+            if model:
+                folder = folder / 'ordered-models' / model
+                folder.mkdir(parents=True)
+            data = raw.replace(b'0.1 2', b'0.1 7') if model == 'model-2' else raw
+            (folder / 'psd.out').write_bytes(data)
+            query = {'format': 'bin-count', **({'model': model} if model else {})}
+            with patch.dict(self.web.JOBS, {}, clear=True):
+                response = self.client.get(f'/api/zeopp/export/{self.job_id}/psd.txt', query_string=query)
+            self.addCleanup(response.close)
+            expected = b'Bin\tCount\n0\t0\n0.1\t7\n0.2\t0\n' if model == 'model-2' else b'Bin\tCount\n0\t0\n0.1\t2\n0.2\t0\n'
+            self.assertEqual(response.data, expected)
+            self.assertIn(f'chemex-psd{"-" + model if model else ""}-bin-count.txt', response.headers['Content-Disposition'])
+            original = self.client.get(f'/api/zeopp/export/{self.job_id}/psd.txt', query_string={'model': model} if model else {})
+            self.addCleanup(original.close)
+            self.assertEqual(original.data, data)
+
+    def test_psd_bin_count_rejects_missing_malformed_and_wrong_formats(self):
+        url = f'/api/zeopp/export/{self.job_id}/psd.txt?format=bin-count'
+        self.assertEqual(self.client.get(url).status_code, 404)
+        for text in ('missing histogram', 'Bin Count Cumulative_dist Derivative_dist\n', 'Bin Count Cumulative_dist Derivative_dist\n0 NaN 1 0\n', 'Bin Count Cumulative_dist Derivative_dist\n0 1\n'):
+            (self.root / self.job_id / 'psd.out').write_text(text)
+            self.assertEqual(self.client.get(url).status_code, 422)
+        self.assertEqual(self.client.get(f'/api/zeopp/export/{self.job_id}/volpo.txt?format=bin-count').status_code, 400)
+        self.assertEqual(self.client.get(f'/api/zeopp/export/{self.job_id}/psd.txt?format=unknown').status_code, 400)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -95,7 +95,7 @@ const copy: Record<Locale, ZeoppStrings> = {
     extended: 'Extended',
     standard: 'Standard',
     copy: '复制',
-    exportTxt: '导出 TXT',
+    exportTxt: '导出原始 TXT',
     exportMd: '导出 MD',
     tooltip: {
       x: '孔径',
@@ -137,7 +137,7 @@ const copy: Record<Locale, ZeoppStrings> = {
     extended: 'Extended',
     standard: 'Standard',
     copy: 'Copy',
-    exportTxt: 'Export TXT',
+    exportTxt: 'Export raw TXT',
     exportMd: 'Export MD',
     tooltip: {
       x: 'Diameter',
@@ -682,6 +682,18 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
                     <Group justify="space-between" align="center">
                       <Text className="summary-title">{t.rawOutput}</Text>
                       <Group gap="xs" className="raw-output-actions">
+                        {(result.mode ?? subtab) === 'psd' && result.jobId ? (
+                          <Button
+                            radius="xl"
+                            variant="light"
+                            leftSection={<IconDownload size={16} />}
+                            component="a"
+                            href={`./api/zeopp/export/${result.jobId}/psd.txt?format=bin-count${result.modelId ? '&model=' + result.modelId : ''}`}
+                            download={`chemex-psd${result.modelId ? '-' + result.modelId : ''}-bin-count.txt`}
+                          >
+                            {locale === 'zh' ? '导出 Bin / Count TXT' : 'Export Bin / Count TXT'}
+                          </Button>
+                        ) : null}
                         <Button
                           radius="xl"
                           variant="light"
