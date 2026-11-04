@@ -29,6 +29,12 @@ export async function fetchZeoppStatus() {
   return (await readJsonOrThrow(await fetch('./api/zeopp/status'))) as ZeoppStatus;
 }
 
+export async function inspectZeoppCif(file: File) {
+  const form = new FormData();
+  form.append('file', file);
+  return (await readJsonOrThrow(await fetch('./api/zeopp/inspect-cif', { method: 'POST', body: form }))) as { disordered: boolean };
+}
+
 export async function fetchJob<T>(jobId: string) {
   return (await readJsonOrThrow(await fetch(`./api/jobs/${jobId}`))) as JobSnapshot<T>;
 }

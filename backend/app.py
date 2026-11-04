@@ -4,6 +4,7 @@ import os
 import math
 import re
 import threading
+import tempfile
 import time
 import uuid
 from pathlib import Path
@@ -14,7 +15,7 @@ from werkzeug.utils import secure_filename
 
 from .services_sesami import get_sesami_status, parse_upload as parse_sesami_upload, run_workflow as run_sesami_workflow
 from .services_zeopp import detect_zeopp_binary, run_workflow as run_zeopp_workflow
-from .structures import DisorderError
+from .structures import DisorderError, prepare_structure
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST_DIR = ROOT / 'dist'
@@ -209,8 +210,10 @@ def start_zeopp_job(mode: str):
         return jsonify({'error': 'Please upload a structure file.'}), 400
 
     strategy = request.form.get('disorderStrategy', 'reject')
-    if strategy not in {'reject', 'ordered_candidates'}:
+    if strategy not in {'reject', 'ordered_candidates', 'direct_cif'}:
         return jsonify({'error': 'Unknown disorder strategy.'}), 400
+    if strategy == 'direct_cif' and (mode != 'psd' or not upload.filename.lower().endswith('.cif')):
+        return jsonify({'error': 'Direct original CIF calculation is available for PSD only.'}), 400
     try:
         max_models = int(request.form.get('maxOrderedModels', '2'))
         if not 1 <= max_models <= 4:
@@ -300,6 +303,24 @@ def sesami_compare() -> Any:
 @app.post('/api/zeopp/psd')
 def zeopp_psd() -> Any:
     return start_zeopp_job('psd')
+
+
+@app.post('/api/zeopp/inspect-cif')
+def inspect_zeopp_cif() -> Any:
+    upload = request.files.get('file')
+    if upload is None or not upload.filename or not upload.filename.lower().endswith('.cif'):
+        return jsonify({'error': 'Please upload a CIF file.'}), 400
+    # Inspection does not create a job or launch Zeo++; temporary staging is removed.
+    with tempfile.TemporaryDirectory(prefix='chemex-cif-inspect-') as directory:
+        path = Path(directory) / 'input.cif'
+        path.write_bytes(upload.read())
+        try:
+            prepare_structure(path)
+        except DisorderError:
+            return jsonify({'disordered': True})
+        except ValueError as exc:
+            return jsonify({'error': str(exc)}), 400
+    return jsonify({'disordered': False})
 
 
 @app.post('/api/zeopp/res')

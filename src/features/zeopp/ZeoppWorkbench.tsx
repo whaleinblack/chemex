@@ -14,7 +14,7 @@ import {
   Text,
 } from '@mantine/core';
 import { IconAtom2, IconChartHistogram, IconCopy, IconDownload, IconUpload } from '@tabler/icons-react';
-import { downloadTextArtifact, fetchJob, submitZeoppJob } from '../../lib/api';
+import { downloadTextArtifact, fetchJob, inspectZeoppCif, submitZeoppJob } from '../../lib/api';
 import type {
   JobSnapshot,
   Locale,
@@ -388,6 +388,27 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
   const [maxOrderedModels, setMaxOrderedModels] = useState(2);
   const [modelIndex, setModelIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [inspecting, setInspecting] = useState(false);
+  const [inspection, setInspection] = useState<{ file: File; disordered: boolean } | null>(null);
+
+  useEffect(() => {
+    setInspection(null);
+    if (subtab !== 'psd' || !file?.name.toLowerCase().endsWith('.cif')) {
+      setInspecting(false);
+      return;
+    }
+    let cancelled = false;
+    setInspecting(true);
+    setError(null);
+    inspectZeoppCif(file).then((response) => {
+      if (!cancelled) setInspection({ file, disordered: response.disordered });
+    }).catch((nextError) => {
+      if (!cancelled) setError(nextError instanceof Error ? nextError.message : 'CIF inspection failed.');
+    }).finally(() => {
+      if (!cancelled) setInspecting(false);
+    });
+    return () => { cancelled = true; };
+  }, [file, subtab]);
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get('job');
@@ -433,12 +454,18 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
   const running = submitting || job?.status === 'queued' || job?.status === 'running';
   const workflowResult = job?.result ?? null;
   const result = workflowResult?.orderedModels?.[modelIndex] ?? workflowResult;
-  const disorderDetected = job?.errorCode === 'cif_disorder' || Boolean(job?.error?.includes('Disordered / partial-occupancy'));
+  const disorderDetected = (subtab === 'psd' && inspection?.file === file && inspection?.disordered)
+    || job?.errorCode === 'cif_disorder' || Boolean(job?.error?.includes('Disordered / partial-occupancy'));
   const displayError = error || job?.error;
 
-  const submit = async (ordered = false) => {
+  const submit = async (strategy: 'reject' | 'ordered_candidates' | 'direct_cif' = 'reject') => {
     if (!file) {
       setError(t.noFile);
+      return;
+    }
+    if (subtab === 'psd' && file.name.toLowerCase().endsWith('.cif') &&
+        (inspecting || inspection?.file !== file || (inspection.disordered && strategy === 'reject'))) {
+      setError(locale === 'zh' ? '请等待 CIF 检查并选择计算方式。' : 'Wait for CIF inspection and choose a calculation method.');
       return;
     }
     try {
@@ -447,9 +474,9 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
       setJob(null);
       setModelIndex(0);
       const params: Record<string, string | number | boolean> = {};
-      if (ordered) {
-        params.disorderStrategy = 'ordered_candidates';
-        params.maxOrderedModels = maxOrderedModels;
+      if (strategy !== 'reject') {
+        params.disorderStrategy = strategy;
+        if (strategy === 'ordered_candidates') params.maxOrderedModels = subtab === 'psd' ? 2 : maxOrderedModels;
       }
       if (subtab === 'res') {
         params.extended = resMode === 'extended';
@@ -528,7 +555,7 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
 
               <Stack gap="sm">
                 <Text fw={700}>{t.upload}</Text>
-                <FileButton onChange={setFile} accept=".cssr,.cif,.cuc,.v1,.res,.xyz,.pdb,.mol,.mol2,.txt">
+                <FileButton disabled={Boolean(running)} onChange={(nextFile) => { setFile(nextFile); setJob(null); setError(null); setModelIndex(0); }} accept=".cssr,.cif,.cuc,.v1,.res,.xyz,.pdb,.mol,.mol2,.txt">
                   {(props) => (
                     <Button {...props} radius="xl" size="md" variant="light" leftSection={<IconUpload size={16} />}>
                       {t.upload}
@@ -546,8 +573,8 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
               {file?.name.toLowerCase().endsWith('.cif') ? (
                 <Text size="sm" c="dimmed">
                   {locale === 'zh'
-                    ? '保留原始 CIF。检测到已标注的构象无序后，可生成通过周期接触和配位初筛的满占位 P1 候选，并逐个计算；不直接把所有占有率改为 1。'
-                    : 'The original CIF is preserved. Explicit conformational disorder can be converted to screened full-occupancy P1 candidates and calculated individually.'}
+                    ? (subtab === 'psd' ? '检测到无序后，请选择直接使用原始 CIF，或生成两套有序构象分别计算 PSD。' : '保留原始 CIF。检测到构象无序后，可生成通过初筛的满占位 P1 候选并逐个计算。')
+                    : (subtab === 'psd' ? 'For a disordered CIF, choose direct original-CIF PSD or two ordered candidates.' : 'The original CIF is preserved; disordered conformers can be converted to screened P1 candidates.')}
                 </Text>
               ) : null}
 
@@ -601,23 +628,32 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
 
               {job ? <Text className="progress-meta">{job.status === 'failed' ? t.failedTitle : `${job.stage} · ${job.progress}%`}</Text> : null}
               {displayError ? <Text role="alert" className="error-text">{displayError}</Text> : null}
-              {disorderDetected && !running ? (
-                <Alert color="blue" title={locale === 'zh' ? '为无序结构构建候选模型' : 'Build ordered candidates'}>
+              {inspecting ? <Text size="sm">{locale === 'zh' ? '正在检查 CIF…' : 'Inspecting CIF…'}</Text> : null}
+              {disorderDetected && !running && !inspecting ? (
+                <Alert color="blue" title={locale === 'zh' ? (subtab === 'psd' ? '检测到无序，请选择 PSD 计算方式' : '为无序结构构建候选模型') : (subtab === 'psd' ? 'Disorder detected: choose PSD method' : 'Build ordered candidates')}>
                   <Stack gap="sm">
+                    {subtab === 'psd' ? (
+                      <>
+                        <Text size="sm">{locale === 'zh' ? '直接计算会把原始 CIF 原样交给引擎，不自动处理互斥构象；生成构象会分别计算两套通过初筛的有序模型。两种方式均保留原始文件。' : 'Direct mode passes the original CIF unchanged to the engine. Candidate mode calculates two screened ordered structures separately. Both preserve the source file.'}</Text>
+                        <Button type="button" radius="xl" variant="light" onClick={() => void submit('direct_cif')} disabled={!file || !zeoppReady}>
+                          {locale === 'zh' ? '直接用原始 CIF 计算 PSD' : 'Calculate PSD directly from original CIF'}
+                        </Button>
+                      </>
+                    ) : null}
                     <Text size="sm">{locale === 'zh'
                       ? '按固定骨架的连接锚点配对局部替代构象，保持可表示的占有率比例，剔除周期近接触和配位异常，再分别计算。置换无序、空位或需要更大超胞的情况会另行提示。'
                       : 'Match local alternatives by fixed-atom anchors, preserve representable populations, screen periodic contacts and coordination, then calculate each candidate. Substitution, vacancies and larger-supercell cases need dedicated modeling.'}</Text>
-                    <NumberInput label={locale === 'zh' ? '最多候选模型数' : 'Maximum candidates'} min={1} max={4} allowDecimal={false}
-                      value={maxOrderedModels} onChange={(value) => setMaxOrderedModels(Math.max(1, Math.min(4, Number(value) || 2)))} />
-                    <Button type="button" radius="xl" onClick={() => void submit(true)} disabled={!file || !zeoppReady}>
-                      {locale === 'zh' ? '生成候选有序模型并计算' : 'Build ordered candidates and calculate'}
+                    {subtab !== 'psd' ? <NumberInput label={locale === 'zh' ? '最多候选模型数' : 'Maximum candidates'} min={1} max={4} allowDecimal={false}
+                      value={maxOrderedModels} onChange={(value) => setMaxOrderedModels(Math.max(1, Math.min(4, Number(value) || 2)))} /> : null}
+                    <Button type="button" radius="xl" onClick={() => void submit('ordered_candidates')} disabled={!file || !zeoppReady}>
+                      {locale === 'zh' ? (subtab === 'psd' ? '生成两套有序构象并计算 PSD' : '生成候选有序模型并计算') : (subtab === 'psd' ? 'Build two ordered candidates and calculate PSD' : 'Build ordered candidates and calculate')}
                     </Button>
                   </Stack>
                 </Alert>
               ) : null}
               {job?.warning && !workflowResult?.disorderSummary ? <Text className="notice-text">{job.warning}</Text> : null}
 
-              <SubmitButton loading={Boolean(running)} progress={job?.progress ?? 0} label={t.run} disabled={!zeoppReady} />
+              <SubmitButton loading={Boolean(running)} progress={job?.progress ?? 0} label={t.run} disabled={!zeoppReady || inspecting || (subtab === 'psd' && Boolean(disorderDetected))} />
             </Stack>
           </Paper>
         </form>
@@ -666,7 +702,7 @@ export function ZeoppWorkbench({ locale, zeoppReady }: Props) {
                 </Group>
 
                 {result.rows?.length ? <PsdChart locale={locale} rows={result.rows} /> : null}
-                {result.warning ? <Alert color="yellow">{result.warning}</Alert> : null}
+                {result.warning ? <Alert color="yellow" title={result.structure?.disorderPolicy === 'direct_original_cif' ? (locale === 'zh' ? '原始 CIF 直接计算 PSD' : 'Direct original-CIF PSD') : undefined}>{result.warning}</Alert> : null}
                 {result.structure?.normalized ? (
                   <Text size="sm" c="dimmed">
                     {locale === 'zh'

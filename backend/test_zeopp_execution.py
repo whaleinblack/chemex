@@ -44,6 +44,27 @@ class ZeoppExecutionTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'finite positive'):
                     service.get_zeopp_timeout_seconds()
 
+    def test_direct_psd_passes_original_bytes_to_engine_and_records_policy(self):
+        from backend.test_disorder import ethane
+        source = self.job_dir / 'original.cif'
+        original = ethane().encode()
+        source.write_bytes(original)
+        output = self.job_dir / 'psd.out'
+        code = "import sys; from pathlib import Path; Path(sys.argv[1]).write_text('Bin Count Cumulative_dist Derivative_dist\\n0 0 1 0\\n1 2 1 1\\n')"
+        def command(binary, mode, path, params, **kwargs):
+            self.assertEqual(path, source)
+            self.assertEqual(path.read_bytes(), original)
+            return [sys.executable, '-c', code, str(output)], output, False
+        with patch.object(service, 'detect_zeopp_binary', return_value=(Path(sys.executable), 'ready')), patch.object(service, 'build_command', side_effect=command), patch.object(service, 'prepare_structure', side_effect=AssertionError('Direct CIF must not be normalized')):
+            result = service.run_workflow('job', self.job_dir, source, 'psd', {'disorderStrategy': 'direct_cif'}, lambda *_: None, lambda: 0)
+        self.assertEqual(source.read_bytes(), original)
+        self.assertEqual(result['structure']['disorderPolicy'], 'direct_original_cif')
+        self.assertFalse(result['structure']['normalized'])
+        self.assertIn('original CIF', result['warning'])
+        self.assertEqual(self.metadata()['structure'], result['structure'])
+        with self.assertRaisesRegex(ValueError, 'PSD only'):
+            service.run_workflow('job', self.job_dir, source, 'volpo', {'disorderStrategy': 'direct_cif'}, lambda *_: None, lambda: 0)
+
     def test_success_preserves_output_and_execution_metadata(self):
         result = self.run_engine(
             "import sys; from pathlib import Path; "

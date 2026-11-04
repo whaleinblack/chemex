@@ -1,5 +1,6 @@
 """HTTP attachment checks; SESAMI is unrelated to this route and is isolated."""
 import importlib
+import io
 import sys
 import tempfile
 from pathlib import Path
@@ -96,6 +97,26 @@ class ExportTest(unittest.TestCase):
             self.assertEqual(self.client.get(url).status_code, 422)
         self.assertEqual(self.client.get(f'/api/zeopp/export/{self.job_id}/volpo.txt?format=bin-count').status_code, 400)
         self.assertEqual(self.client.get(f'/api/zeopp/export/{self.job_id}/psd.txt?format=unknown').status_code, 400)
+
+    def test_cif_inspection_detects_disorder_without_engine_or_job(self):
+        from backend.test_disorder import ethane
+        ordered = "data_test\n_cell_length_a 20\n_cell_length_b 20\n_cell_length_c 20\n_cell_angle_alpha 90\n_cell_angle_beta 90\n_cell_angle_gamma 90\n_space_group_name_H-M_alt 'P 1'\nloop_\n_atom_site_label\n_atom_site_type_symbol\n_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\n_atom_site_occupancy\nC1 C .5 .5 .5 1\n"
+        before = set(self.web.JOBS)
+        with patch.object(self.web.threading, 'Thread', side_effect=AssertionError('Inspection must not launch a worker')):
+            for text, expected in ((ethane(), True), (ordered, False)):
+                response = self.client.post('/api/zeopp/inspect-cif', data={'file': (io.BytesIO(text.encode()), 'test.cif')})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json, {'disordered': expected})
+        self.assertEqual(set(self.web.JOBS), before)
+        self.assertEqual(self.client.post('/api/zeopp/inspect-cif').status_code, 400)
+        response = self.client.post('/api/zeopp/inspect-cif', data={'file': (io.BytesIO(b'invalid'), 'test.cif')})
+        self.assertEqual(response.status_code, 400)
+
+    def test_direct_original_cif_is_restricted_to_psd(self):
+        with patch.object(self.web, 'detect_zeopp_binary', return_value=(Path('engine'), 'ready')):
+            for mode, filename in (('volpo', 'test.cif'), ('res', 'test.cif'), ('psd', 'test.cssr')):
+                response = self.client.post(f'/api/zeopp/{mode}', data={'disorderStrategy': 'direct_cif', 'file': (io.BytesIO(b'input'), filename)})
+                self.assertEqual(response.status_code, 400)
 
 
 if __name__ == '__main__':

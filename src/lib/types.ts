@@ -144,6 +144,7 @@ export type ZeoppResult = {
   rawOutputDownloadUrl?: string;
   structure?: {
     normalized: boolean;
+    disorderPolicy?: string;
     unitCellSites?: number;
     sourceSpaceGroup?: string;
   };

@@ -489,13 +489,21 @@ def run_workflow(
     advance: Callable[[str, int], None],
     current_progress: Callable[[], int],
 ) -> dict[str, Any]:
+    direct_cif = params.get('disorderStrategy') == 'direct_cif'
+    if direct_cif and (mode != 'psd' or input_path.suffix.lower() != '.cif'):
+        raise ValueError('Direct original CIF calculation is available for PSD only.')
     if params.get('disorderStrategy') == 'ordered_candidates':
         return run_ordered_workflow(job_id, job_dir, input_path, mode, params, advance, current_progress)
     zeopp_binary, zeopp_message = detect_zeopp_binary()
     if zeopp_binary is None:
         raise RuntimeError(zeopp_message)
 
-    prepared_path, structure_metadata = prepare_structure(input_path)
+    if direct_cif:
+        prepared_path = input_path
+        structure_metadata = {'format': 'cif', 'normalized': False, 'sourceFile': input_path.name,
+                              'disorderPolicy': 'direct_original_cif'}
+    else:
+        prepared_path, structure_metadata = prepare_structure(input_path)
     command, output_path, extended = build_command(zeopp_binary, mode, prepared_path, params, output_dir=job_dir)
     timeout_seconds = get_zeopp_timeout_seconds()
     stdout_lines: list[str] = []
@@ -585,8 +593,14 @@ def run_workflow(
                 for path in (output_path, metadata_path, stdout_path, stderr_path)
             ],
         }
+        warnings = []
+        if direct_cif:
+            warnings.append('原始 CIF 直接计算 PSD：未生成有序构象，分数占位和互斥位置由引擎原生读取，不代表无序系综平均。 '
+                            'PSD calculated directly from the original CIF; no ordered models or disorder-ensemble averaging.')
         if returncode != 0:
-            result['warning'] = f'ZEO++ returned exit code {returncode}, but the {mode.upper()} output file was written and parsed successfully.'
+            warnings.append(f'ZEO++ returned exit code {returncode}, but the {mode.upper()} output file was written and parsed successfully.')
+        if warnings:
+            result['warning'] = ' '.join(warnings)
             metadata['warning'] = result['warning']
         if structure_metadata.get('normalized'):
             result['artifacts'].extend([

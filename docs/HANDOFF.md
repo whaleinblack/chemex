@@ -1,5 +1,11 @@
 # ChemEx Handoff
 
+## Explicit PSD disorder choice
+
+- PSD CIF uploads are inspected by `/api/zeopp/inspect-cif` in temporary storage without a calculation job or engine launch. Disorder presents two explicit actions: direct original-CIF PSD, or two ordered candidates. Changing files invalidates inspection; ordinary ordered CIFs continue through standard P1 preparation.
+- `disorderStrategy=direct_cif` is restricted to PSD CIF inputs. It passes the original uploaded bytes/path to the native engine without normalization or conformer selection. Run metadata records `disorderPolicy=direct_original_cif`; the result visibly identifies direct mode and does not claim disorder-ensemble averaging.
+- Default/API callers still reject disordered CIFs until a strategy is explicitly selected. Other modes retain existing validation. Both PSD methods keep full raw TXT and per-model Bin / Count exports.
+
 ## PSD two-column export
 
 - PSD provides a separate Bin / Count TXT attachment via `?format=bin-count`, with optional `model=model-N`. All histogram bins, including zero-count bins, are retained in original order and numeric text; the first line is `Bin\tCount` and Bin remains in Å. Raw output TXT remains separately available and byte-preserving.
